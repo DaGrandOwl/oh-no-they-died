@@ -1,27 +1,53 @@
+import React, { useState } from "react";
+
+function AdditionForm() {
+  const [a, setA] = useState(50);
+  const [b, setB] = useState(25);
+
+  const handleAChange = (e) => setA(parseInt(e.target.value, 10));
+  const handleBChange = (e) => setB(parseInt(e.target.value, 10));
+
+  return (
+    <form>
+      <input
+        type="range"
+        value={a}
+        onChange={handleAChange}
+        min="0"
+        max="100"
+      />
+      {' + '}
+      <input
+        type="number"
+        value={b}
+        onChange={handleBChange}
+      />
+      {' = '}
+      <output>{a + b}</output>
+    </form>
+  );
+}
+
 function App() {
   return (
-    <body > 
-  <h2>ABOUT</h2>
-  <p>first paragraph.</p>
-  <p>second paragraph.</p>
-  <a href="http://localhost:3000/home" class="button"><button>Click</button></a>
-  <p>
-  <select id="select">
-  <option>Apple</option>
-  <option>Pear</option>
-  <option>Banana</option>
-  <option>Orange</option>
-</select>
-</p>
-<p>
-  <form oninput="x.value=parseInt(a.value)+parseInt(b.value)">
-  <input type="range" id="a" value="50"></input>
-  +<input type="number" id="b" value="25"></input>
-  =<output name="x" for="a b"></output>
-</form>
-</p>
-</body>
-);
+    <div>
+      <h2>ABOUT</h2>
+      <p>first paragraph.</p>
+      <p>second paragraph.</p>
+      <a href="http://localhost:3000/home" className="button"><button>Click</button></a>
+      <p>
+        <select id="select">
+          <option>Apple</option>
+          <option>Pear</option>
+          <option>Banana</option>
+          <option>Orange</option>
+        </select>
+      </p>
+      <p>
+        <AdditionForm />
+      </p>
+    </div>
+  );
 }
 
 export default App;
