@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home.js';
 import About from './pages/About.js';
+import TestTable from './pages/TestTable.js';
 
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
         <Route path="/about" element={<About />} />
+        <Route path="/test" element={<TestTable />} />
       </Routes>
     </BrowserRouter>
   );

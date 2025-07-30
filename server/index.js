@@ -1,23 +1,35 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
-import dotenv from 'dotenv';
+import testRoutes from './routes/test.js';
 import { db } from './db.js';
 
-dotenv.config();
+const fastify = Fastify({ logger: true });
 
-const fastify = Fastify();
-
-await fastify.register(cors);
-await fastify.register(jwt, { secret: process.env.JWT_SECRET });
-
-// Example test route
-fastify.get('/', async (req, res) => {
-  const [rows] = await db.query('SELECT 1');
-  return { success: true, rows };
+// Register CORS to allow frontend requests (e.g., from localhost:3000)
+await fastify.register(cors, {
+  origin: '*', // Use specific origin in production
 });
 
-fastify.listen({ port: 3001 }, err => {
-  if (err) throw err;
-  console.log('Server running at http://localhost:3001');
+// Attach DB instance to Fastify (optional but useful)
+fastify.decorate('db', db);
+
+// Register route
+await fastify.register(testRoutes);
+
+// Root route (optional)
+fastify.get('/', async (request, reply) => {
+  return { message: 'API is running' };
 });
+
+// Start server
+const start = async () => {
+  try {
+    await fastify.listen({ port: 3001 });
+    console.log('Server listening on http://localhost:3001');
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();
