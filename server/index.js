@@ -4,20 +4,16 @@ import testRoutes from './routes/test.js';
 import { db } from './db.js';
 
 const fastify = Fastify({ logger: true });
-
-// Register CORS to allow frontend requests (e.g., from localhost:3000)
-await fastify.register(cors, {
+// Register CORS to allow frontend requests
+await fastify.register(cors, { 
   origin: '*', // Use specific origin in production
 });
-
 // Attach DB instance to Fastify (optional but useful)
 fastify.decorate('db', db);
-
 // Register route
-await fastify.register(testRoutes);
-
+await fastify.register(testRoutes); 
 // Root route (optional)
-fastify.get('/', async (request, reply) => {
+fastify.get('/', async (request, reply) => {    
   return { message: 'API is running' };
 });
 

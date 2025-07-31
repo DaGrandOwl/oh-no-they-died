@@ -14,7 +14,7 @@ function AdditionForm() {
         value={a}
         onChange={handleAChange}
         min="0"
-        max="100"
+        max="245"
       />
       {' + '}
       <input
@@ -33,8 +33,9 @@ function App() {
     <div>
       <h2>ABOUT</h2>
       <p>first paragraph.</p>
-      <p>second paragraph.</p>
-      <a href="http://localhost:3000/home" className="button"><button>Click</button></a>
+      <p>hello</p>
+      <a href="http://localhost:3000/home" className="button"><button>Click</button></a> <br />
+      <a href="http://localhost:3000/test" className="button"><button>Datatable</button></a>
       <p>
         <select id="select">
           <option>Apple</option>
