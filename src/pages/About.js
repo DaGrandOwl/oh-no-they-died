@@ -17,7 +17,7 @@ function App() {
   <form oninput="x.value=parseInt(a.value)+parseInt(b.value)">
   <input type="range" id="a" value="50"></input>
   +<input type="number" id="b" value="25"></input>
-  =<output name="x" for="a b"></output>
+  =<output name="x" for="ab"></output>
 </form>
 </p>
 </body>
