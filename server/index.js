@@ -20,12 +20,14 @@ fastify.get('/', async (request, reply) => {
 // Start server
 const start = async () => {
   try {
-    await fastify.listen({ port: 3001 });
-    console.log('Server listening on http://localhost:3001');
+    const PORT = process.env.PORT || 3001;
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    console.log(`✅ Server listening on http://0.0.0.0:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
 };
+
 
 start();
