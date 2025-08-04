@@ -3,7 +3,7 @@ import { db } from '../db.js';
 export default async function (fastify, options) {
   fastify.get('/api/test', async (request, reply) => {
     try {
-      const [rows] = await db.query('SELECT column1, column2 FROM test');
+      const [rows] = await db.query('SELECT column1, column2, column3 FROM test');
       reply.send(rows);
     } catch (err) {
       console.error(err);

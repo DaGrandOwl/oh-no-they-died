@@ -404,7 +404,9 @@ function Home() {
         <h1 style={styles.h1}>Weekly Food Planner</h1>
       </div>
       <div style={styles.container}>
-        {/* Add Meal Form */}
+        <div>
+          <a href="http://localhost:3000/test" className="button"><button>Datatable</button></a>
+        </div>
         <div>
           <h3>Add a Meal</h3>
           <input
