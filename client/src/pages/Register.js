@@ -20,7 +20,7 @@ export default function Register() {
       return;
     }
 try {
-  const res = await fetch(`http://localhost:3001/api/register`, { // Change to API URL during deployment
+  const res = await fetch(`${process.env.REACT_APP_API_URL}/api/register`, { // Change to API URL during deployment
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

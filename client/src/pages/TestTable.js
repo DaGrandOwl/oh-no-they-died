@@ -4,7 +4,7 @@ function TestTable() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/test') // update if your port is different
+    fetch(`${process.env.REACT_APP_API_URL}/api/test`)
       .then(res => res.json())
       .then(json => {
         console.log("Fetched JSON:", json);
