@@ -1,4 +1,12 @@
-export default async function (fastify, opts) {
+import fp from 'fastify-plugin';
+
+export default fp(async function (fastify, opts) {
+  if (!fastify.jwt) {
+    fastify.register(import('@fastify/jwt'), {
+      secret: process.env.JWT_SECRET || 'supersecret',
+    });
+  }
+
   // REGISTER
   fastify.post('/api/register', async (request, reply) => {
     try {
@@ -8,7 +16,10 @@ export default async function (fastify, opts) {
         return reply.code(400).send({ error: 'All fields are required' });
       }
 
-      const [rows] = await fastify.db.query('SELECT id FROM users WHERE email = ?', [email]);
+      const [rows] = await fastify.db.query(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
       if (rows.length > 0) {
         return reply.code(400).send({ error: 'Email already registered' });
       }
@@ -34,23 +45,28 @@ export default async function (fastify, opts) {
         return reply.code(400).send({ error: 'Email and password are required' });
       }
 
-      const [rows] = await fastify.db.query('SELECT * FROM users WHERE email = ?', [email]);
+      const [rows] = await fastify.db.query(
+        'SELECT * FROM users WHERE email = ?',
+        [email]
+      );
       if (rows.length === 0) {
         return reply.code(401).send({ error: 'User not found' });
       }
 
       const user = rows[0];
 
-      // Compare plain passwords (you can add bcrypt later)
+      // Plaintext password check (insecure — upgrade later)
       if (user.password !== password) {
         return reply.code(401).send({ error: 'Incorrect password' });
       }
 
-      // In future, generate JWT here
-      return reply.send({ message: 'Login successful', user });
+      // Sign JWT token
+      const token = fastify.jwt.sign({ id: user.id, email: user.email });
+
+      return reply.send({ message: 'Login successful', token });
     } catch (err) {
       console.error('❌ Error in /api/login:', err);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });
-}
+});
