@@ -17,6 +17,9 @@ function TestTable() {
   return (
     <div>
       <h2>Test Table Data</h2>
+      <div>
+        <a href="http://localhost:3000/home" className="button"><button>Home</button></a>
+      </div>
       {data.length === 0 ? (
         <p>No data found.</p>
       ) : (
@@ -25,6 +28,7 @@ function TestTable() {
             <tr>
               <th>Column 1</th>
               <th>Column 2</th>
+              <th>Column 3</th>
             </tr>
           </thead>
           <tbody>
@@ -32,6 +36,7 @@ function TestTable() {
               <tr key={index}>
                 <td>{row.column1}</td>
                 <td>{row.column2}</td>
+                <td>{row.column3}</td>
               </tr>
             ))}
           </tbody>
