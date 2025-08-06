@@ -34,8 +34,8 @@ function App() {
       <h2>ABOUT</h2>
       <p>first paragraph.</p>
       <p>hello</p>
-      <a href="http://localhost:3000/home" className="button"><button>Click</button></a> <br />
-      <a href="http://localhost:3000/test" className="button"><button>Datatable</button></a>
+      <a href="/home" className="button"><button>Click</button></a> <br />
+      <a href="/test" className="button"><button>Datatable</button></a>
       <p>
         <select id="select">
           <option>Apple</option>
