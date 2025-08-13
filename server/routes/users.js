@@ -1,4 +1,6 @@
 import fp from 'fastify-plugin';
+import bcrypt from 'bcrypt';
+import rateLimit from '@fastify/rate-limit';
 
 export default fp(async function (fastify, opts) {
   if (!fastify.jwt) {
@@ -7,6 +9,12 @@ export default fp(async function (fastify, opts) {
     });
   }
 
+  //Sets rate limit for all functions in this route to 10 requests/min
+  await fastify.register(rateLimit, {
+    max: 10,
+    timeWindow: '1 minute',
+  });
+  
   // REGISTER
   fastify.post('/api/register', async (request, reply) => {
     try {
@@ -24,9 +32,12 @@ export default fp(async function (fastify, opts) {
         return reply.code(400).send({ error: 'Email already registered' });
       }
 
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       await fastify.db.query(
         'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-        [username, email, password]
+        [username, email, hashedPassword]
       );
 
       return reply.send({ message: 'Registration successful' });
@@ -39,15 +50,15 @@ export default fp(async function (fastify, opts) {
   // LOGIN
   fastify.post('/api/login', async (request, reply) => {
     try {
-      const { email, password } = request.body;
+      const { identifier, password } = request.body; // Identifier can be email or username
 
-      if (!email || !password) {
-        return reply.code(400).send({ error: 'Email and password are required' });
+      if (!identifier || !password) {
+        return reply.code(400).send({ error: 'Email/Username and password are required' });
       }
 
       const [rows] = await fastify.db.query(
-        'SELECT * FROM users WHERE email = ?',
-        [email]
+        'SELECT * FROM users WHERE email = ? OR username = ?',
+        [identifier, identifier]
       );
       if (rows.length === 0) {
         return reply.code(401).send({ error: 'User not found' });
@@ -55,12 +66,11 @@ export default fp(async function (fastify, opts) {
 
       const user = rows[0];
 
-      // Plaintext password check (insecure — upgrade later)
-      if (user.password !== password) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
         return reply.code(401).send({ error: 'Incorrect password' });
       }
 
-      // Sign JWT token
       const token = fastify.jwt.sign({ id: user.id, email: user.email });
 
       return reply.send({ message: 'Login successful', token });

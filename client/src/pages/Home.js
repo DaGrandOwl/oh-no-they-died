@@ -1,103 +1,6 @@
 import React, { useState } from "react";
-import logo from './logo.png';
+import logo from '../components/logo.png';
 
-const styles = {
-  body: {
-    fontFamily: "Arial, sans-serif",
-    padding: 20,
-    background: "#FFF4DC",
-    minHeight: "100vh",
-  },
-  h1: {
-    textAlign: "center",
-  },
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-  },
-  input: {
-    padding: 8,
-    marginRight: 10,
-  },
-  select: {
-    padding: 8,
-    marginRight: 10,
-  },
-  button: {
-    padding: "8px 16px",
-    marginRight: 10,
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "white",
-  },
-  th: {
-    padding: 10,
-    border: "1px solid #ddd",
-    textAlign: "left",
-    verticalAlign: "top",
-    backgroundColor: "#f0f0f0",
-  },
-  td: {
-    padding: 10,
-    border: "1px solid #ddd",
-    textAlign: "left",
-    verticalAlign: "top",
-  },
-  filters: {
-    display: "flex",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  moveBtn: {
-    backgroundColor: "#3498db",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: 4,
-    cursor: "pointer",
-    margin: 1,
-  },
-  deleteBtn: {
-    backgroundColor: "#e74c3c",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: 4,
-    cursor: "pointer",
-    margin: 1,
-  },
-  editBtn: {
-    backgroundColor: "#f39c12",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: 4,
-    cursor: "pointer",
-    margin: 1,
-  },
-  saveBtn: {
-    backgroundColor: "#3498db",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: 4,
-    cursor: "pointer",
-    margin: 1,
-  },
-  titleHeader: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-};
 
 const days = [
   "Sunday",
@@ -109,6 +12,14 @@ const days = [
   "Saturday",
 ];
 const categories = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
+function LogoutButton() {
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // remove JWT
+    window.location.href = '/login';  // redirect to login
+  };
+  return <button onClick={handleLogout}>Log Out</button>;
+}
 
 function Home() {
   const [meals, setMeals] = useState([]);
@@ -217,14 +128,14 @@ function Home() {
 
   // Table View
   const renderTableView = () => (
-    <table style={styles.table}>
+    <table className="table">
       <thead>
         <tr>
-          <th style={styles.th}>Meal</th>
-          <th style={styles.th}>Category</th>
-          <th style={styles.th}>Day</th>
-          <th style={styles.th}>Calories</th>
-          <th style={styles.th}>Actions</th>
+          <th className="th">Meal</th>
+          <th className="th">Category</th>
+          <th className="th">Day</th>
+          <th className="th">Calories</th>
+          <th className="th">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -236,7 +147,7 @@ function Home() {
                   name="name"
                   value={editForm.name}
                   onChange={handleEditFormChange}
-                  style={styles.input}
+                  className="input"
                 />
               </td>
               <td>
@@ -244,7 +155,7 @@ function Home() {
                   name="category"
                   value={editForm.category}
                   onChange={handleEditFormChange}
-                  style={styles.select}
+                  className="select"
                 >
                   <option value="">Category</option>
                   {categories.map((cat) => (
@@ -259,7 +170,7 @@ function Home() {
                   name="day"
                   value={editForm.day}
                   onChange={handleEditFormChange}
-                  style={styles.select}
+                  className="select"
                 >
                   <option value="">Day</option>
                   {days.map((d) => (
@@ -275,13 +186,13 @@ function Home() {
                   type="number"
                   value={editForm.calories}
                   onChange={handleEditFormChange}
-                  style={styles.input}
+                  className="input"
                   min={0}
                 />
               </td>
               <td>
                 <button
-                  style={styles.saveBtn}
+                  className="saveBtn"
                   onClick={() => saveMeal(meal.index)}
                 >
                   Save
@@ -290,33 +201,33 @@ function Home() {
             </tr>
           ) : (
             <tr key={meal.index}>
-              <td style={styles.td}>{meal.name}</td>
-              <td style={styles.td}>{meal.category}</td>
-              <td style={styles.td}>{meal.day}</td>
-              <td style={styles.td}>{meal.calories} kcal</td>
-              <td style={styles.td}>
+              <td className="td">{meal.name}</td>
+              <td className="td">{meal.category}</td>
+              <td className="td">{meal.day}</td>
+              <td className="td">{meal.calories} kcal</td>
+              <td className="td">
                 <button
-                  style={styles.moveBtn}
+                  className="moveBtn"
                   onClick={() => moveMeal(meal.index, -1)}
                   title="Move up"
                 >
                   ⬆
                 </button>
                 <button
-                  style={styles.moveBtn}
+                  className="moveBtn"
                   onClick={() => moveMeal(meal.index, 1)}
                   title="Move down"
                 >
                   ⬇
                 </button>
                 <button
-                  style={styles.editBtn}
+                  className="editBtn"
                   onClick={() => startEditMeal(meal.index)}
                 >
                   Edit
                 </button>
                 <button
-                  style={styles.deleteBtn}
+                  className="deleteBtn"
                   onClick={() => deleteMeal(meal.index)}
                 >
                   Delete
@@ -336,11 +247,11 @@ function Home() {
     const maxRows = Math.max(...Object.values(columns).map((c) => c.length), 0);
 
     return (
-      <table style={styles.table}>
+      <table className="table">
         <thead>
           <tr>
             {days.map((day) => (
-              <th key={day} style={styles.th}>
+              <th key={day} className="th">
                 {day}
               </th>
             ))}
@@ -351,9 +262,9 @@ function Home() {
             <tr key={rowIdx}>
               {days.map((day) => {
                 const meal = columns[day][rowIdx];
-                if (!meal) return <td key={day} style={styles.td}></td>;
+                if (!meal) return <td key={day} className="td"></td>;
                 return (
-                  <td key={day} style={styles.td}>
+                  <td key={day} className="td">
                     <strong>{meal.name}</strong>
                     <br />
                     ({meal.category})
@@ -361,14 +272,14 @@ function Home() {
                     {meal.calories} kcal
                     <br />
                     <button
-                      style={styles.moveBtn}
+                      className="moveBtn"
                       onClick={() => moveMeal(meal.index, -1)}
                       title="Move up"
                     >
                       ⬆
                     </button>
                     <button
-                      style={styles.moveBtn}
+                      className="moveBtn"
                       onClick={() => moveMeal(meal.index, 1)}
                       title="Move down"
                     >
@@ -376,13 +287,13 @@ function Home() {
                     </button>
                     <br />
                     <button
-                      style={styles.editBtn}
+                      className="editBtn"
                       onClick={() => startEditMeal(meal.index)}
                     >
                       Edit
                     </button>
                     <button
-                      style={styles.deleteBtn}
+                      className="deleteBtn"
                       onClick={() => deleteMeal(meal.index)}
                     >
                       Delete
@@ -398,14 +309,14 @@ function Home() {
   };
 
   return (
-    <div style={styles.body}>
-      <div style={styles.titleHeader}>
-        <img src={logo} alt="Bitewise Logo" style={{ height: 180, marginBottom: 0 }} />
-        <h1 style={styles.h1}>Weekly Food Planner</h1>
+    <div className="body">
+      <div className="titleHeader">
+        <img src={logo} alt="Bitewise Logo" className="logo" />
+        <h1 className="h1">Weekly Food Planner</h1>
       </div>
-      <div style={styles.container}>
+      <div className="container">
         <div>
-          <a href="http://localhost:3000/test" className="button"><button>Datatable</button></a>
+          <LogoutButton />
         </div>
         <div>
           <h3>Add a Meal</h3>
@@ -415,13 +326,13 @@ function Home() {
             value={form.name}
             onChange={handleFormChange}
             placeholder="Meal Name"
-            style={styles.input}
+            className="input"
           />
           <select
             name="category"
             value={form.category}
             onChange={handleFormChange}
-            style={styles.select}
+            className="select"
           >
             <option value="">Category</option>
             {categories.map((cat) => (
@@ -434,7 +345,7 @@ function Home() {
             name="day"
             value={form.day}
             onChange={handleFormChange}
-            style={styles.select}
+            className="select"
           >
             <option value="">Day</option>
             {days.map((d) => (
@@ -450,21 +361,21 @@ function Home() {
             onChange={handleFormChange}
             placeholder="Calories (kcal)"
             min={0}
-            style={styles.input}
+            className="input"
           />
-          <button style={styles.button} onClick={addMeal}>
+          <button className="button" onClick={addMeal}>
             Add Meal
           </button>
         </div>
         {/* Filters and View Mode */}
-        <div style={styles.filters}>
+        <div className="filters">
           <label>
             Filter by Category:
             <select
               name="category"
               value={filters.category}
               onChange={handleFilterChange}
-              style={styles.select}
+              className="select"
             >
               <option value="">All</option>
               {categories.map((cat) => (
@@ -480,7 +391,7 @@ function Home() {
               name="day"
               value={filters.day}
               onChange={handleFilterChange}
-              style={styles.select}
+              className="select"
             >
               <option value="">All</option>
               {days.map((d) => (
@@ -496,7 +407,7 @@ function Home() {
               name="viewMode"
               value={filters.viewMode}
               onChange={handleFilterChange}
-              style={styles.select}
+              className="select"
             >
               <option value="table">Table View</option>
               <option value="calendar">Calendar View</option>

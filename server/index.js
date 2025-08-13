@@ -8,7 +8,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const fastify = Fastify({ logger: true }); // Enable CORS for frontend requests
+const fastify = Fastify({ logger: true }); 
+
+// Enable CORS for frontend requests
 await fastify.register(cors, {
   origin: ['https://oh-no-they-died.vercel.app', 'http://localhost:3000'] // remove localhost in final deployment
 });

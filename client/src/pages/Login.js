@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); //can be email or username
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -12,11 +12,11 @@ function Login() {
     setError('');
 
     try {
-          const response = await fetch(`${process.env.REACT_APP_API_URL}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password })
+      });
 
       const data = await response.json();
 
@@ -25,7 +25,7 @@ function Login() {
         return;
       }
 
-      // Save token and redirect
+      //Saves token and redirect
       localStorage.setItem('token', data.token);
       navigate('/home');
     } catch (err) {
@@ -39,11 +39,11 @@ function Login() {
       <h2>Login</h2>
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Email:</label><br />
+          <label>Email or Username:</label><br />
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             required
           /><br />
         </div>
@@ -62,6 +62,7 @@ function Login() {
 
         <button type="submit">Login</button>
       </form>
+      <p>To register, go to <a href="/register">Register</a></p>
     </div>
   );
 }
