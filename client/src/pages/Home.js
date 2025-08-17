@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import "../components/Home.css"; // Move your CSS into this file
 
 // Home.js
+function LogoutButton() {
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // remove JWT
+    window.location.href = '/login';  // redirect to login
+  };
+  return <button onClick={handleLogout}>Log Out</button>;
+}
 
 const recommendedMeals = [
   { name:'Grilled Chicken Bowl', calories:520, protein:42, tags:['high‑protein'], allergens:['gluten'] },
@@ -174,6 +181,7 @@ export default function Home() {
       {/* Main */}
       <main className="main" id="planner">
         <div className="cards">
+      <p><LogoutButton /></p>
           {/* Recommended */}
           <section className="card" aria-labelledby="recTitle">
             <div className="card-header">

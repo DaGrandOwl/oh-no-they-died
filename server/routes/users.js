@@ -42,7 +42,7 @@ export default fp(async function (fastify, opts) {
 
       return reply.send({ message: 'Registration successful' });
     } catch (err) {
-      console.error('❌ Error in /api/register:', err);
+      console.error('Error in /api/register:', err);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });
@@ -75,7 +75,7 @@ export default fp(async function (fastify, opts) {
 
       return reply.send({ message: 'Login successful', token });
     } catch (err) {
-      console.error('❌ Error in /api/login:', err);
+      console.error('Error in /api/login:', err);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });

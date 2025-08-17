@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
-import testRoutes from './routes/test.js';
+import recipeRoutes from './routes/recipe.js';
 import userRoutes from './routes/users.js';
 import { db } from './db.js';
 import dotenv from 'dotenv';
@@ -33,7 +33,7 @@ fastify.decorate('authenticate', async function (request, reply) {
 fastify.decorate('db', db);
 
 // Register routes
-await fastify.register(testRoutes);
+await fastify.register(recipeRoutes);
 await fastify.register(userRoutes); 
 
 // Root route
@@ -46,7 +46,7 @@ const start = async () => {
   try {
     const PORT = process.env.PORT || 3001;
     await fastify.listen({ port: PORT, host: '0.0.0.0' }); // Allows Render to access it
-    console.log(`✅ Server listening on http://localhost:${PORT}`);
+    console.log(`Server listening on http://localhost:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
