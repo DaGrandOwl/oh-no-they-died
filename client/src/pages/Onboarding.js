@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Check, Moon, Sun, Package, ShoppingCart, Heart } from 'lucide-react';
-import { usePreferences } from '../contexts/PrefContext';
+import { useSettings } from '../App';
+
 const styles = {
-  container: {
+    container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
     fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -413,43 +414,42 @@ const styles = {
 export default function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const { prefs, updatePrefs } = usePreferences();
+  const { settings, updateSettings } = useSettings();
 
-  const [settings, setSettings] = useState({
-    allergens: prefs.allergens || [],
-    inventory: prefs.user_inventory ?? true,
-    shoppingList: prefs.shopping_list ?? false,
-    darkMode: prefs.theme === "dark"
+  const [onboardingSettings, setOnboardingSettings] = useState({
+    allergens: settings.allergens || [],
+    inventory: settings.user_inventory ?? true,
+    shoppingList: settings.shopping_list ?? false,
+    darkMode: settings.theme === "dark"
   });
 
   const handleThemeChange = (dark) => {
-    setSettings((prev) => ({ ...prev, darkMode: dark }));
-    updatePrefs({ theme: dark ? "dark" : "light" });
-    document.body.setAttribute("data-theme", dark ? "dark" : "light");
+    setOnboardingSettings((prev) => ({ ...prev, darkMode: dark }));
+    updateSettings({ theme: dark ? "dark" : "light" });
   };
 
   const persistSettings = () => {
-    updatePrefs({
-      theme: settings.darkMode ? "dark" : "light",
-      allergens: settings.allergens,
-      user_inventory: !!settings.inventory,
-      shopping_list: !!settings.shoppingList,
+    updateSettings({
+      theme: onboardingSettings.darkMode ? "dark" : "light",
+      allergens: onboardingSettings.allergens,
+      user_inventory: !!onboardingSettings.inventory,
+      shopping_list: !!onboardingSettings.shoppingList,
     });
   };
 
   const finishOnboarding = () => {
     persistSettings();
-    window.location.href = "/dashboard";
+    window.location.href = "/home"; //Change later
   };
 
   useEffect(() => {
-    setSettings({
-      allergens: prefs.allergens || [],
-      inventory: prefs.user_inventory ?? true,
-      shoppingList: prefs.shopping_list ?? false,
-      darkMode: prefs.theme === "dark",
+    setOnboardingSettings({
+      allergens: settings.allergens || [],
+      inventory: settings.user_inventory ?? true,
+      shoppingList: settings.shopping_list ?? false,
+      darkMode: settings.theme === "dark",
     });
-  }, [prefs]);
+  }, [settings]);
 
   const allergenOptions = ['Celiac', 'Diabetic', 'Nut Allergy', 'Dairy Free', 'Shellfish', 'Soy', 'Egg'];
 
@@ -481,7 +481,7 @@ export default function OnboardingFlow() {
       id: 'theme',
       title: 'Choose Your Theme',
       subtitle: 'How do you prefer to view your meal plans?',
-      icon: settings.darkMode ? <Moon style={styles.featureIcon} /> : <Sun style={styles.featureIcon} />,
+      icon: onboardingSettings.darkMode ? <Moon style={styles.featureIcon} /> : <Sun style={styles.featureIcon} />,
       content: (
         <div>
           <div style={styles.themeGrid}>
@@ -489,10 +489,10 @@ export default function OnboardingFlow() {
               onClick={() => handleThemeChange(true)}
               style={{
                 ...styles.themeOption,
-                ...(settings.darkMode ? styles.themeOptionDark : styles.themeOptionInactive)
+                ...(onboardingSettings.darkMode ? styles.themeOptionDark : styles.themeOptionInactive)
               }}
             >
-              <Moon style={{...styles.themeIcon, color: settings.darkMode ? '#a78bfa' : '#9ca3af'}} />
+              <Moon style={{...styles.themeIcon, color: onboardingSettings.darkMode ? '#a78bfa' : '#9ca3af'}} />
               <h3 style={{...styles.themeTitle, color: 'white'}}>Dark Mode</h3>
               <p style={{...styles.themeDesc, color: '#9ca3af'}}>Easy on the eyes, perfect for evening planning</p>
             </button>
@@ -501,12 +501,12 @@ export default function OnboardingFlow() {
               onClick={() => handleThemeChange(false)}
               style={{
                 ...styles.themeOption,
-                ...(!settings.darkMode ? styles.themeOptionLight : styles.themeOptionInactive)
+                ...(!onboardingSettings.darkMode ? styles.themeOptionLight : styles.themeOptionInactive)
               }}
             >
-              <Sun style={{...styles.themeIcon, color: !settings.darkMode ? '#eab308' : '#9ca3af'}} />
-              <h3 style={{...styles.themeTitle, color: !settings.darkMode ? '#1f2937' : 'white'}}>Light Mode</h3>
-              <p style={{...styles.themeDesc, color: !settings.darkMode ? '#4b5563' : '#9ca3af'}}>Clean and bright, great for daytime use</p>
+              <Sun style={{...styles.themeIcon, color: !onboardingSettings.darkMode ? '#eab308' : '#9ca3af'}} />
+              <h3 style={{...styles.themeTitle, color: !onboardingSettings.darkMode ? '#1f2937' : 'white'}}>Light Mode</h3>
+              <p style={{...styles.themeDesc, color: !onboardingSettings.darkMode ? '#4b5563' : '#9ca3af'}}>Clean and bright, great for daytime use</p>
             </button>
           </div>
           
@@ -535,7 +535,7 @@ export default function OnboardingFlow() {
             {allergenOptions.map((allergen) => (
               <button
                 key={allergen}
-                onClick={() => setSettings(prev => ({
+                onClick={() => setOnboardingSettings(prev => ({
                   ...prev,
                   allergens: prev.allergens.includes(allergen)
                     ? prev.allergens.filter(a => a !== allergen)
@@ -543,19 +543,19 @@ export default function OnboardingFlow() {
                 }))}
                 style={{
                   ...styles.allergenButton,
-                  ...(settings.allergens.includes(allergen) ? styles.allergenActive : styles.allergenInactive)
+                  ...(onboardingSettings.allergens.includes(allergen) ? styles.allergenActive : styles.allergenInactive)
                 }}
               >
-                {settings.allergens.includes(allergen) && <Check style={{width: '1rem', height: '1rem'}} />}
+                {onboardingSettings.allergens.includes(allergen) && <Check style={{width: '1rem', height: '1rem'}} />}
                 <span>{allergen}</span>
               </button>
             ))}
           </div>
 
-          {settings.allergens.length > 0 && (
+          {onboardingSettings.allergens.length > 0 && (
             <div style={styles.selectedInfo}>
               <h4 style={styles.selectedTitle}>Selected conditions:</h4>
-              <p style={styles.selectedText}>{settings.allergens.join(', ')}</p>
+              <p style={styles.selectedText}>{onboardingSettings.allergens.join(', ')}</p>
             </div>
           )}
         </div>
@@ -571,17 +571,17 @@ export default function OnboardingFlow() {
           <div 
             style={{
               ...styles.featureCard,
-              ...(settings.inventory ? styles.featureActive : styles.featureInactive)
+              ...(onboardingSettings.inventory ? styles.featureActive : styles.featureInactive)
             }}
-            onClick={() => setSettings(prev => ({ ...prev, inventory: !prev.inventory }))}
+            onClick={() => setOnboardingSettings(prev => ({ ...prev, inventory: !prev.inventory }))}
           >
             <div style={styles.featureContent}>
-              <Package style={{...styles.featureIcon, color: settings.inventory ? '#a78bfa' : '#9ca3af'}} />
+              <Package style={{...styles.featureIcon, color: onboardingSettings.inventory ? '#a78bfa' : '#9ca3af'}} />
               <div style={styles.featureInfo}>
                 <div style={styles.featureHeader}>
                   <h3 style={styles.featureTitle}>Inventory Tracking</h3>
-                  <div style={{...styles.toggle, ...(settings.inventory ? styles.toggleActive : styles.toggleInactive)}}>
-                    <div style={{...styles.toggleSwitch, ...(settings.inventory ? styles.toggleSwitchActive : styles.toggleSwitchInactive)}}></div>
+                  <div style={{...styles.toggle, ...(onboardingSettings.inventory ? styles.toggleActive : styles.toggleInactive)}}>
+                    <div style={{...styles.toggleSwitch, ...(onboardingSettings.inventory ? styles.toggleSwitchActive : styles.toggleSwitchInactive)}}></div>
                   </div>
                 </div>
                 <p style={styles.featureDesc}>Keep track of ingredients you have at home. We'll suggest meals based on what's available and remind you when items are running low.</p>
@@ -592,17 +592,17 @@ export default function OnboardingFlow() {
           <div 
             style={{
               ...styles.featureCard,
-              ...(settings.shoppingList ? {borderColor: '#06b6d4', background: 'linear-gradient(45deg, rgba(6, 182, 212, 0.2), rgba(34, 197, 94, 0.2))'} : styles.featureInactive)
+              ...(onboardingSettings.shoppingList ? {borderColor: '#06b6d4', background: 'linear-gradient(45deg, rgba(6, 182, 212, 0.2), rgba(34, 197, 94, 0.2))'} : styles.featureInactive)
             }}
-            onClick={() => setSettings(prev => ({ ...prev, shoppingList: !prev.shoppingList }))}
+            onClick={() => setOnboardingSettings(prev => ({ ...prev, shoppingList: !prev.shoppingList }))}
           >
             <div style={styles.featureContent}>
-              <ShoppingCart style={{...styles.featureIcon, color: settings.shoppingList ? '#22d3ee' : '#9ca3af'}} />
+              <ShoppingCart style={{...styles.featureIcon, color: onboardingSettings.shoppingList ? '#22d3ee' : '#9ca3af'}} />
               <div style={styles.featureInfo}>
                 <div style={styles.featureHeader}>
                   <h3 style={styles.featureTitle}>Smart Shopping Lists</h3>
-                  <div style={{...styles.toggle, background: settings.shoppingList ? '#06b6d4' : '#4b5563'}}>
-                    <div style={{...styles.toggleSwitch, ...(settings.shoppingList ? styles.toggleSwitchActive : styles.toggleSwitchInactive)}}></div>
+                  <div style={{...styles.toggle, background: onboardingSettings.shoppingList ? '#06b6d4' : '#4b5563'}}>
+                    <div style={{...styles.toggleSwitch, ...(onboardingSettings.shoppingList ? styles.toggleSwitchActive : styles.toggleSwitchInactive)}}></div>
                   </div>
                 </div>
                 <p style={styles.featureDesc}>Automatically generate shopping lists from your meal plans. Organize by store sections and never forget an ingredient again.</p>
@@ -624,21 +624,21 @@ export default function OnboardingFlow() {
             <div style={styles.settingsList}>
               <div style={styles.settingItem}>
                 <div style={{...styles.settingDot, background: '#a78bfa'}}></div>
-                <span style={{color: '#d1d5db'}}>Theme: {settings.darkMode ? 'Dark Mode' : 'Light Mode'}</span>
+                <span style={{color: '#d1d5db'}}>Theme: {onboardingSettings.darkMode ? 'Dark Mode' : 'Light Mode'}</span>
               </div>
-              {settings.allergens.length > 0 && (
+              {onboardingSettings.allergens.length > 0 && (
                 <div style={styles.settingItem}>
                   <div style={{...styles.settingDot, background: '#f87171'}}></div>
-                  <span style={{color: '#d1d5db'}}>Health filters: {settings.allergens.length} condition{settings.allergens.length > 1 ? 's' : ''}</span>
+                  <span style={{color: '#d1d5db'}}>Health filters: {onboardingSettings.allergens.length} condition{onboardingSettings.allergens.length > 1 ? 's' : ''}</span>
                 </div>
               )}
               <div style={styles.settingItem}>
                 <div style={{...styles.settingDot, background: '#22d3ee'}}></div>
-                <span style={{color: '#d1d5db'}}>Inventory: {settings.inventory ? 'Enabled' : 'Disabled'}</span>
+                <span style={{color: '#d1d5db'}}>Inventory: {onboardingSettings.inventory ? 'Enabled' : 'Disabled'}</span>
               </div>
               <div style={styles.settingItem}>
                 <div style={{...styles.settingDot, background: '#4ade80'}}></div>
-                <span style={{color: '#d1d5db'}}>Shopping Lists: {settings.shoppingList ? 'Enabled' : 'Disabled'}</span>
+                <span style={{color: '#d1d5db'}}>Shopping Lists: {onboardingSettings.shoppingList ? 'Enabled' : 'Disabled'}</span>
               </div>
             </div>
           </div>
@@ -651,7 +651,7 @@ export default function OnboardingFlow() {
   ];
 
   const nextStep = () => {
-    persistSettings(); // always persist current settings
+    persistSettings();
 
     if (currentStep < steps.length - 1) {
       setIsTransitioning(true);
@@ -674,7 +674,6 @@ export default function OnboardingFlow() {
     }
   };
 
-  //Change to add toasts
   const skipAll = () => {
     persistSettings();
     finishOnboarding();
@@ -698,10 +697,7 @@ export default function OnboardingFlow() {
           {currentStep < steps.length - 1 && (
             <button
               onClick={skipAll}
-              style={{
-                ...styles.skipButton,
-                ':hover': { color: 'white' }
-              }}
+              style={styles.skipButton}
               onMouseEnter={(e) => e.target.style.color = 'white'}
               onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
             >
@@ -818,7 +814,7 @@ export default function OnboardingFlow() {
         <div style={styles.debugPanel}>
           <h4 style={styles.debugTitle}>Current Settings (Debug):</h4>
           <div style={styles.debugContent}>
-            {JSON.stringify(settings, null, 2)}
+            {JSON.stringify(onboardingSettings, null, 2)}
           </div>
         </div>
       </div>
