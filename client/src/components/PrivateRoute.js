@@ -1,10 +1,14 @@
-import { Navigate } from 'react-router-dom';
+import { useAuth } from "../contexts/AuthContext"; 
+import { Navigate } from "react-router-dom";
 
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
-}
-// PrivateRoute component checks if a token exists in localStorage
-// If it does, it renders the children components; otherwise, it redirects to the login page.
-export default PrivateRoute;
+  const { isAuthenticated, loading } = useAuth();
 
+  if (loading) {
+    return <p>Loading...</p>; // or a spinner
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+export default PrivateRoute;

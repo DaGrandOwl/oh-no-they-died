@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Check, Moon, Sun, Package, ShoppingCart, Heart } from 'lucide-react';
-
+import { usePreferences } from '../contexts/PrefContext';
 const styles = {
   container: {
     minHeight: '100vh',
@@ -412,13 +412,44 @@ const styles = {
 
 export default function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [settings, setSettings] = useState({
-    allergens: [],
-    inventory: true,
-    shoppingList: false,
-    darkMode: true
-  });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const { prefs, updatePrefs } = usePreferences();
+
+  const [settings, setSettings] = useState({
+    allergens: prefs.allergens || [],
+    inventory: prefs.user_inventory ?? true,
+    shoppingList: prefs.shopping_list ?? false,
+    darkMode: prefs.theme === "dark"
+  });
+
+  const handleThemeChange = (dark) => {
+    setSettings((prev) => ({ ...prev, darkMode: dark }));
+    updatePrefs({ theme: dark ? "dark" : "light" });
+    document.body.setAttribute("data-theme", dark ? "dark" : "light");
+  };
+
+  const persistSettings = () => {
+    updatePrefs({
+      theme: settings.darkMode ? "dark" : "light",
+      allergens: settings.allergens,
+      user_inventory: !!settings.inventory,
+      shopping_list: !!settings.shoppingList,
+    });
+  };
+
+  const finishOnboarding = () => {
+    persistSettings();
+    window.location.href = "/dashboard";
+  };
+
+  useEffect(() => {
+    setSettings({
+      allergens: prefs.allergens || [],
+      inventory: prefs.user_inventory ?? true,
+      shoppingList: prefs.shopping_list ?? false,
+      darkMode: prefs.theme === "dark",
+    });
+  }, [prefs]);
 
   const allergenOptions = ['Celiac', 'Diabetic', 'Nut Allergy', 'Dairy Free', 'Shellfish', 'Soy', 'Egg'];
 
@@ -454,8 +485,8 @@ export default function OnboardingFlow() {
       content: (
         <div>
           <div style={styles.themeGrid}>
-            <button
-              onClick={() => setSettings(prev => ({ ...prev, darkMode: true }))}
+            <button 
+              onClick={() => handleThemeChange(true)}
               style={{
                 ...styles.themeOption,
                 ...(settings.darkMode ? styles.themeOptionDark : styles.themeOptionInactive)
@@ -467,7 +498,7 @@ export default function OnboardingFlow() {
             </button>
             
             <button
-              onClick={() => setSettings(prev => ({ ...prev, darkMode: false }))}
+              onClick={() => handleThemeChange(false)}
               style={{
                 ...styles.themeOption,
                 ...(!settings.darkMode ? styles.themeOptionLight : styles.themeOptionInactive)
@@ -620,6 +651,8 @@ export default function OnboardingFlow() {
   ];
 
   const nextStep = () => {
+    persistSettings(); // always persist current settings
+
     if (currentStep < steps.length - 1) {
       setIsTransitioning(true);
       setTimeout(() => {
@@ -627,7 +660,7 @@ export default function OnboardingFlow() {
         setIsTransitioning(false);
       }, 150);
     } else {
-      console.log('Onboarding complete with settings:', settings);
+      finishOnboarding();
     }
   };
 
@@ -641,8 +674,10 @@ export default function OnboardingFlow() {
     }
   };
 
+  //Change to add toasts
   const skipAll = () => {
-    console.log('Skipping onboarding with default settings:', settings);
+    persistSettings();
+    finishOnboarding();
   };
 
   const currentStepData = steps[currentStep];

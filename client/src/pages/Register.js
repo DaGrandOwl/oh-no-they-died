@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { usePreferences } from '../contexts/PrefContext';
 
 export default function Register() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
+
+  const { login } = useAuth();
+  const { updatePrefs } = usePreferences();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -12,9 +18,9 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
-    if (!form.username || !form.email || !form.password) {
+    const { username, email, password } = form;
+    if (!username || !email || !password) {
       setError('All fields are required.');
       return;
     }
@@ -30,13 +36,24 @@ export default function Register() {
 
       if (!res.ok) {
         setError(data.error || 'Registration failed');
-      } else {
-        setSuccess(data.message || 'Registration successful');
-        setForm({ username: '', email: '', password: '' });
+        return;
       }
+
+      // Auto-login: store token
+      localStorage.setItem('token', data.token);
+
+      // Initialize empty preferences with timestamp
+      const initialPrefs = { lastUpdated: new Date().toISOString() };
+      updatePrefs(initialPrefs);
+      localStorage.setItem('preferences', JSON.stringify(initialPrefs));
+
+      // Update Auth Context
+      login({ id: data.user.id, email: data.user.email }, data.token);
+
+      navigate('/onboarding');
     } catch (err) {
-      setError('Server error. Please try again later.');
       console.error(err);
+      setError('Server error. Please try again later.');
     }
   };
 
@@ -77,7 +94,6 @@ export default function Register() {
           />
 
           {error && <p style={styles.error}>{error}</p>}
-          {success && <p style={styles.success}>{success}</p>}
 
           <button type="submit" style={styles.button}>Register</button>
         </form>
@@ -148,11 +164,6 @@ const styles = {
   },
   error: {
     color: '#f87171',
-    fontSize: '0.85rem',
-    marginTop: '-0.5rem'
-  },
-  success: {
-    color: '#4ade80',
     fontSize: '0.85rem',
     marginTop: '-0.5rem'
   },

@@ -2,12 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+import reportWebVitals from './reportWebVitals'; //remove later
+//contexts
+import { PrefProvider } from './contexts/PrefContext.js';
+import { AuthProvider } from './contexts/AuthContext.js';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <PrefProvider>
+        <App />
+      </PrefProvider>
+    </AuthProvider>
   </React.StrictMode>
 );
 

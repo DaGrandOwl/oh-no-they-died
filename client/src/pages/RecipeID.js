@@ -125,7 +125,7 @@ export default function RecipeID() {
           By Servings
         </label>
         <input type="number" value={servings} onChange={(e) => setServings(Number(e.target.value))} disabled={mode !== "servings"} />
-
+        <br />
         <label>
           <input type="radio" value="size" checked={mode === "size"} onChange={() => setMode("size")} />
           By Size (in g)
@@ -153,7 +153,7 @@ export default function RecipeID() {
           By Servings
         </label>
         <input type="number" value={nutritionServings} onChange={(e) => setNutritionServings(Number(e.target.value))} disabled={nutritionMode !== "servings"} />
-
+        <br />
         <label>
           <input type="radio" value="size" checked={nutritionMode === "size"} onChange={() => setNutritionMode("size")} />
           By Size (g)
