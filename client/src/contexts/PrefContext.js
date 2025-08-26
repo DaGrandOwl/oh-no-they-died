@@ -4,11 +4,11 @@ import { useAuth } from "./AuthContext";
 const PreferencesContext = createContext();
 
 export function PrefProvider({ children }) {
-  const { token } = useAuth(); // optional; may be null
+  const { token } = useAuth();
   const [prefs, setPrefs] = useState(() => {
     try {
       const raw = localStorage.getItem("preferences");
-      return raw ? JSON.parse(raw) : {};
+      return raw ? JSON.parse(raw) : { allergens: [], user_inventory: false, diet_type: null };
     } catch {
       return {};
     }
@@ -55,7 +55,7 @@ export function PrefProvider({ children }) {
     if (token) {
       fetch(`${process.env.REACT_APP_API_URL}/api/user/preferences`, {
         method: "PUT",
-        headers: { //currently has no effect
+        headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },

@@ -18,6 +18,10 @@ export default fp(async function (fastify, opts) {
   // REGISTER
   fastify.post('/api/register', async (request, reply) => {
     try {
+      if (request.headers['content-type'] !== 'application/json') {
+        return reply.status(400).send({ error: 'Invalid Content-Type' });
+      }
+
       const { username, email, password } = request.body;
 
       if (!username || !email || !password) {
@@ -69,6 +73,10 @@ export default fp(async function (fastify, opts) {
   // LOGIN
   fastify.post('/api/login', async (request, reply) => {
     try {
+      if (request.headers['content-type'] !== 'application/json') {
+        return reply.status(400).send({ error: 'Invalid Content-Type' });
+      }
+
       const { identifier, password } = request.body;
 
       if (!identifier || !password) {
@@ -102,9 +110,16 @@ export default fp(async function (fastify, opts) {
       let preferences = {};
       if (prefsRows.length > 0) {
         const row = prefsRows[0];
+        // Ensure allergens is parsed correctly
+        let allergens = [];
+        try {
+          allergens = row.allergens ? JSON.parse(row.allergens) : [];
+        } catch {
+          allergens = [];
+        }
         preferences = {
           theme: row.theme,
-          allergens: row.allergens ? JSON.parse(row.allergens) : [],
+          allergens,
           user_inventory: !!row.user_inventory,
           shopping_list: !!row.shopping_list,  
           updated_at: row.updated_at

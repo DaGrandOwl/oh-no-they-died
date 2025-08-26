@@ -4,21 +4,23 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null); // Store user info
+  const [user, setUser] = useState(null); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // On refresh, restore token and user if available
     const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
-    if (storedToken) {
-      setToken(storedToken);
-    }
+    if (storedToken) {setToken(storedToken)};
     if (storedUser) {
+    try {
       setUser(JSON.parse(storedUser));
+    } catch {
+      localStorage.removeItem("user");
     }
-    setLoading(false);
-  }, []);
+  }
+  setLoading(false);
+}, []);
 
   const login = (userData, newToken) => {
     localStorage.setItem("token", newToken);

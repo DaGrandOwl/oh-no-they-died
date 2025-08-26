@@ -1,11 +1,14 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import dotenv from 'dotenv';
+import { db } from './db.js';
+
 import recipeRoutes from './routes/recipe.js';
 import userRoutes from './routes/users.js';
 import preferenceRoutes from './routes/preferences.js';
-import { db } from './db.js';
-import dotenv from 'dotenv';
+import mealplanRoutes from './routes/mealplan.js';
+import recommendRoutes from './routes/recommend.js';
 
 dotenv.config();
 
@@ -15,6 +18,7 @@ const fastify = Fastify({ logger: true });
 await fastify.register(cors, {
   origin: ['https://oh-no-they-died.vercel.app','http://localhost:3000'], //remove localhost in production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
 
@@ -39,6 +43,8 @@ fastify.decorate('db', db);
 await fastify.register(recipeRoutes);
 await fastify.register(userRoutes); 
 await fastify.register(preferenceRoutes);
+await fastify.register(mealplanRoutes);
+await fastify.register(recommendRoutes);
 
 //Root route
 fastify.get('/', async (request, reply) => {

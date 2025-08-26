@@ -6,13 +6,16 @@ import reportWebVitals from './reportWebVitals'; //remove later
 //contexts
 import { PrefProvider } from './contexts/PrefContext.js';
 import { AuthProvider } from './contexts/AuthContext.js';
+import { PlanProvider } from './contexts/PlanContext.js';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthProvider>
       <PrefProvider>
+        <PlanProvider>
         <App />
+        </PlanProvider>
       </PrefProvider>
     </AuthProvider>
   </React.StrictMode>

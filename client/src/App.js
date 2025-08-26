@@ -12,7 +12,9 @@ import Onboarding from './pages/Onboarding.js';
 import Settings from './pages/Settings.js';
 // Components
 import PrivateRoute from './components/PrivateRoute';
+import Recommendations from './pages/Recommendations.js';
 import Layout from './components/Layout.js';
+
 
 function App() {
   return (
@@ -22,9 +24,12 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/settings" element={<Settings />} />          
-        
-          <Route element={<Layout />}> {/* Routes with Layout (Sidebar) */}
+          <Route path="/settings" element={<Settings />} />   
+
+          <Route path="/test" element={<Recommendations />} /> {/* temp */}
+          
+          {/* Routes with Layout (Sidebar) */}
+          <Route element={<Layout />}> 
             <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/recipe" element={<RecipeList />} />
