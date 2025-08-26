@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { 
   Calendar, 
   Search, 
@@ -7,7 +7,7 @@ import {
   PieChart,
   Sparkles
 } from "lucide-react";
-import { useSettings } from '../App';
+import { usePreferences } from "../contexts/PrefContext";
 
 // Import shared styles (would be in a separate constants file)
 import { 
@@ -44,7 +44,7 @@ function writeWeekPlan(plan) {
 }
 
 export default function Home() {
-  const { settings } = useSettings();
+  const { prefs } = usePreferences();
   const weekDates = getWeekDates();
   
   // Weekly plan
@@ -72,7 +72,7 @@ export default function Home() {
     
     // Filter out meals with user's allergens from settings
     const hasUserAllergen = m.allergens.some(allergen => 
-      settings.allergens.map(a => a.toLowerCase()).includes(allergen.toLowerCase())
+      prefs.allergens.map(a => a.toLowerCase()).includes(allergen.toLowerCase())
     );
     
     return (
@@ -152,11 +152,11 @@ export default function Home() {
   const themeStyles = {
     app: {
       minHeight: '100vh',
-      background: settings.theme === 'dark' 
+      background: prefs.theme === 'dark' 
         ? 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)' 
         : 'linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%, #cffafe 100%)',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
+      color: prefs.theme === 'dark' ? '#f8fafc' : '#1e293b'
     },
     main: {
       padding: '2rem',
@@ -165,12 +165,12 @@ export default function Home() {
     headerTitle: {
       fontSize: '1.875rem',
       fontWeight: 'bold',
-      color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b',
+      color: prefs.theme === 'dark' ? '#f8fafc' : '#1e293b',
       margin: 0
     },
     headerSub: {
       fontSize: '1rem',
-      color: settings.theme === 'dark' ? '#94a3b8' : '#64748b',
+      color: prefs.theme === 'dark' ? '#94a3b8' : '#64748b',
       margin: '0.25rem 0 0 0'
     }
   };

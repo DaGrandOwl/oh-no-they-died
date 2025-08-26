@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 
 const PreferencesContext = createContext();
@@ -55,11 +55,11 @@ export function PrefProvider({ children }) {
     if (token) {
       fetch(`${process.env.REACT_APP_API_URL}/api/user/preferences`, {
         method: "PUT",
-        headers: {
+        headers: { //currently has no effect
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(merged),
+        body: JSON.stringify(merged), 
       }).catch(() => {
         // DB update failed; local prefs still intact
       });

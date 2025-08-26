@@ -1,196 +1,191 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useSettings } from '../App';
-import { cardStyle } from '../Styles';
 
-// Example recipe data
-const recipes = {
-  1: {
-    id: 1,
-    name: "Mediterranean Quinoa Bowl",
-    description: "A healthy and flavorful bowl packed with fresh vegetables, quinoa, and Mediterranean herbs",
-    prepTime: "15 mins",
-    cookTime: "25 mins",
-    difficulty: "Easy",
-    ingredients: [
-      "1 cup quinoa, rinsed",
-      "2 cups vegetable broth",
-      "1 large cucumber, diced",
-      "200 g feta cheese, crumbled",
-    ],
-    directions: "Cook 1 cup quinoa in 2 cups vegetable broth for 15 mins. Let cool. Mix with feta, olive oil, and lemon juice. Add vegetables and toss.",
-    nutrition: [
-      { name: "Calories", value: "285 kcal", dv: "-" },
-      { name: "Protein", value: "12 g", dv: "24%" },
-      { name: "Carbohydrates", value: "35 g", dv: "12%" },
-      { name: "Fat", value: "12 g", dv: "18%" },
-    ],
-  },
-  2: {
-    id: 2,
-    name: "Spicy Lentil Soup",
-    description: "Warm and comforting lentil soup with spices and herbs",
-    prepTime: "10 mins",
-    cookTime: "30 mins",
-    difficulty: "Medium",
-    ingredients: [
-      "1 cup red lentils",
-      "4 cups vegetable broth",
-      "1 onion, chopped",
-      "2 cloves garlic, minced",
-    ],
-    directions: "Sauté onion and garlic, add lentils and broth, cook for 30 mins. Season with spices of choice.",
-    nutrition: [
-      { name: "Calories", value: "210 kcal", dv: "-" },
-      { name: "Protein", value: "14 g", dv: "28%" },
-      { name: "Carbohydrates", value: "30 g", dv: "10%" },
-      { name: "Fat", value: "5 g", dv: "8%" },
-    ],
-  },
-};
-
-export default function RecipePage() {
-  const { id } = useParams();
-  const { settings } = useSettings();
-  const recipe = recipes[id];
-
-  // Theme-dependent styles
-  const themeStyles = {
-    container: {
-      minHeight: '100vh',
-      background: settings.theme === 'dark' 
-        ? 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)' 
-        : 'linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%, #cffafe 100%)',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
-    },
-    main: {
-      padding: '2rem',
-      overflow: 'auto'
+//Parse and scale ingredients
+function scaleIngredients(ingredients, servings, baseServings, size, selectedSize, mode) {
+  return ingredients.map(ing => {
+    const q = parseFloat(ing.quantity);
+    if (isNaN(q)) {
+      return { ...ing, quantity: ing.quantity };
     }
-  };
 
-  if (!recipe) {
-    return <div style={{ color: "white", padding: "2rem" }}>Recipe not found.</div>;
+    let scaled;
+    if (mode === "servings") {
+      scaled = q * servings / baseServings;
+    } else {
+      scaled = q * selectedSize / size;
+    }
+
+    return { 
+      ...ing, 
+      quantity: Number.isInteger(scaled) ? scaled : scaled.toFixed(2) 
+    };
+  });
+}
+
+//Detect and scale directions
+function scaleDirections(directions, servings, baseServings, size, selectedSize, mode) {
+  const unitRegex = /(\d+(\.\d+)?|\d+\/\d+)\s*(g|kg|mg|μg|ml|l|IU|cups|cup|tsp|tbsp|oz|lb|pieces|piece|pcs|pc)/gi;
+
+  return directions.replace(unitRegex, (match, num, _, unit) => {
+    let value;
+    if (num.includes("/")) {
+      const [a, b] = num.split("/");
+      value = parseFloat(a) / parseFloat(b);
+    } else {
+      value = parseFloat(num);
+    }
+
+    let scaled;
+    if (mode === "servings") {
+      scaled = value * servings / baseServings;
+    } else {
+      scaled = value * selectedSize / size;
+    }
+
+    const clean = Number.isInteger(scaled) ? scaled : scaled.toFixed(2);
+    return `${clean} ${unit}`;
+  });
+}
+
+//Parse and scale nutrition facts
+function scaleNutritionFacts(text, servings, baseServings, size, selectedSize, mode) {
+  const lines = text.split(/\n|(?=[A-Z][a-z])|(?<=%)/).map(l => l.trim()).filter(Boolean);
+  const nutrition = [];
+
+  for (let line of lines) {
+    const match = line.match(/^(.+?)\s+([\d.]+)([a-z|A-Z|μ|IU]*)\s*(\d+%|)$/);
+    if (match) {
+      const [, name, num, unit, dv] = match;
+      let value;
+      if (mode === "servings") {
+        value = parseFloat(num) * servings / baseServings;
+      } else {
+        value = parseFloat(num) * selectedSize / size;
+      }
+
+      nutrition.push({
+        type: "nutrient",
+        name,
+        value: Number.isInteger(value) ? value : value.toFixed(2),
+        unit,
+        dv: dv || ""
+      });
+    } else {
+      nutrition.push({ type: "category", name: line });
+    }
   }
+  return nutrition;
+}
+
+export default function RecipeID() {
+  const { id } = useParams();
+  const [recipe, setRecipe] = useState(null);
+
+  //Recipe scaling state
+  const [servings, setServings] = useState(1);
+  const [sizeInput, setSizeInput] = useState(100);
+  const [mode, setMode] = useState("servings"); // "servings" | "size"
+
+  //Nutrition scaling staate
+  const [nutritionMode, setNutritionMode] = useState("servings"); 
+  const [nutritionServings, setNutritionServings] = useState(1);
+  const [nutritionSize, setNutritionSize] = useState(100);
+
+  useEffect(() => {
+    async function fetchRecipe() {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/recipe/${id}`);
+      const data = await res.json();
+      setRecipe(data.recipe);
+      setServings(data.recipe.baseServings);
+      setNutritionServings(data.recipe.baseServings);
+      setSizeInput(data.recipe.size);
+      setNutritionSize(data.recipe.size);
+    }
+    fetchRecipe();
+  }, [id]);
+
+  if (!recipe) return <p>Loading...</p>;
+
+  const scaledIngredients = scaleIngredients(recipe.ingredients, servings, recipe.baseServings, recipe.size, sizeInput, mode);
+  const scaledDirections = scaleDirections(recipe.directions, servings, recipe.baseServings, recipe.size, sizeInput, mode);
+  const nutrition = scaleNutritionFacts(recipe.nutrition_facts, nutritionServings, recipe.baseServings, recipe.size, nutritionSize, nutritionMode);
 
   return (
-    <div style={themeStyles.container}>
-      <div style={themeStyles.main}>
-        <div style={cardStyle}>
-          <h2 style={{ margin: 0, fontSize: "1.5rem", color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b' }}>
-            {recipe.name}
-          </h2>
-          <p style={{color: settings.theme === 'dark' ? '#94a3b8' : '#64748b'}}>{recipe.description}</p>
-          <div style={{ display: "flex", gap: "1rem", fontSize: "0.85rem" }}>
-            <span style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '0.3rem 0.7rem',
-              borderRadius: '1rem',
-              color: settings.theme === 'dark' ? '#d1d5db' : '#4b5563'
-            }}>Prep: {recipe.prepTime}</span>
-            <span style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '0.3rem 0.7rem',
-              borderRadius: '1rem',
-              color: settings.theme === 'dark' ? '#d1d5db' : '#4b5563'
-            }}>Cook: {recipe.cookTime}</span>
-            <span style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '0.3rem 0.7rem',
-              borderRadius: '1rem',
-              color: settings.theme === 'dark' ? '#d1d5db' : '#4b5563'
-            }}>{recipe.difficulty}</span>
-          </div>
-        </div>
+    <div>
+      <h1>{recipe.name}</h1> 
+      <h2>{recipe.description}</h2> 
+      <img src={recipe.image} alt="recipe" width={200}/><br />
 
-        {/* Ingredients */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '1rem',
-          marginBottom: '1rem',
-        }}>
-          <div style={{
-            padding: '1rem 1.5rem',
-            fontWeight: 'bold',
-            borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-            color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
-          }}>
-            Ingredients
-          </div>
-          <div style={{padding: '1rem 1.5rem 1.5rem 1.5rem'}}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-              {recipe.ingredients.map((ing, i) => (
-                <div key={i} style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  padding: '0.6rem',
-                  borderRadius: '0.5rem',
-                  color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
-                }}>{ing}</div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Directions */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '1rem',
-          marginBottom: '1rem',
-        }}>
-          <div style={{
-            padding: '1rem 1.5rem',
-            fontWeight: 'bold',
-            borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-            color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
-          }}>
-            Directions
-          </div>
-          <div style={{
-            padding: '1rem 1.5rem 1.5rem 1.5rem',
-            color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b',
-            fontSize: '0.95rem'
-          }}>
-            {recipe.directions}
-          </div>
-        </div>
-
-        {/* Nutrition Facts */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '1rem',
-          marginBottom: '1rem',
-        }}>
-          <div style={{
-            padding: '1rem 1.5rem',
-            fontWeight: 'bold',
-            borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-            color: settings.theme === 'dark' ? '#f8fafc' : '#1e293b'
-          }}>
-            Nutrition Facts
-          </div>
-          <div style={{padding: '1rem 1.5rem 1.5rem 1.5rem'}}>
-            <table style={{ width: "100%", borderCollapse: "collapse", color: settings.theme === 'dark' ? '#e2e8f0' : '#4b5563', fontSize: "0.9rem" }}>
-              <thead>
-                <tr>
-                  <th style={{textAlign: "left", padding: "0.5rem", color: '#a78bfa'}}>Nutrient</th>
-                  <th style={{textAlign: "left", padding: "0.5rem", color: '#a78bfa'}}>Value</th>
-                  <th style={{textAlign: "left", padding: "0.5rem", color: '#a78bfa'}}>%DV</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recipe.nutrition.map((n, i) => (
-                  <tr key={i}>
-                    <td style={{padding: "0.5rem", borderBottom: "1px solid rgba(148, 163, 184, 0.1)"}}>{n.name}</td>
-                    <td style={{padding: "0.5rem", borderBottom: "1px solid rgba(148, 163, 184, 0.1)"}}>{n.value}</td>
-                    <td style={{padding: "0.5rem", borderBottom: "1px solid rgba(148, 163, 184, 0.1)"}}>{n.dv}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* Scaling selector */}
+      <div>
+        <h3>Ingredients & Directions Scaling</h3>
+        <label>
+          <input type="radio" value="servings" checked={mode === "servings"} onChange={() => setMode("servings")} />
+          By Servings
+        </label>
+        <input type="number" value={servings} onChange={(e) => setServings(Number(e.target.value))} disabled={mode !== "servings"} />
+        <br />
+        <label>
+          <input type="radio" value="size" checked={mode === "size"} onChange={() => setMode("size")} />
+          By Size (in g)
+        </label>
+        <input type="number" value={sizeInput} onChange={(e) => setSizeInput(Number(e.target.value))} disabled={mode !== "size"} />
       </div>
+
+      {/* Ingredients */}
+      <h2>Ingredients</h2>
+      <ul>
+        {scaledIngredients.map(ing => (
+          <li key={ing.id}> {ing.quantity} {ing.unit} {ing.item_name}</li>
+        ))}
+      </ul>
+
+      {/* Directions */}
+      <h2>Directions</h2>
+      <p>{scaledDirections}</p>
+
+      {/* Nutrition Facts */}
+      <div>
+        <h3>Nutrition Scaling</h3>
+        <label>
+          <input type="radio" value="servings" checked={nutritionMode === "servings"} onChange={() => setNutritionMode("servings")} />
+          By Servings
+        </label>
+        <input type="number" value={nutritionServings} onChange={(e) => setNutritionServings(Number(e.target.value))} disabled={nutritionMode !== "servings"} />
+        <br />
+        <label>
+          <input type="radio" value="size" checked={nutritionMode === "size"} onChange={() => setNutritionMode("size")} />
+          By Size (g)
+        </label>
+        <input type="number" value={nutritionSize} onChange={(e) => setNutritionSize(Number(e.target.value))} disabled={nutritionMode !== "size"} />
+      </div>
+
+      <h2>Nutrition</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nutrient</th>
+            <th>Value</th>
+            <th>%DV</th>
+          </tr>
+        </thead>
+        <tbody>
+          {nutrition.map((item, idx) =>
+            item.type === "category" ? (
+              <tr key={idx}>
+                <td colSpan="3"><b>{item.name}</b></td>
+              </tr>
+            ) : (
+              <tr key={idx}>
+                <td>{item.name}</td>
+                <td>{item.value} {item.unit}</td>
+                <td>{item.dv}</td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { 
   Calendar, 
@@ -7,7 +6,7 @@ import {
   Settings,
   Sparkles
 } from 'lucide-react';
-import { useSettings } from '../App';
+import { usePreferences } from '../contexts/PrefContext';
 
 // Styles for the sidebar (moved from Home.js)
 const sidebarStyles = {
@@ -82,7 +81,7 @@ const sidebarStyles = {
 };
 
 const Layout = () => {
-  const { settings } = useSettings();
+  const { prefs } = usePreferences();
   
   // Determine active nav item based on current route
   const getActiveNav = (path) => {
@@ -139,7 +138,7 @@ const Layout = () => {
             gap: '0.5rem'
           }}>
             <Sparkles style={{width: '1rem', height: '1rem', color: '#a78bfa'}} />
-            Current Theme: {settings.theme === 'dark' ? 'Dark' : 'Light'}
+            Current Theme: {prefs.theme === 'dark' ? 'Dark' : 'Light'}
           </div>
           <div style={{
             fontSize: '0.75rem',
