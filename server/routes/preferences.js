@@ -11,6 +11,15 @@ export default fp(async function (fastify) {
     return mysqlDate ? new Date(mysqlDate).toISOString() : null;
   }
 
+  //Ensure parsed JSON is not null
+  function safeJSONParse(str, fallback) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+}
+
   //GET preferences from DB
   fastify.get("/api/user/preferences", { preHandler: [fastify.authenticate] }, async (req, reply) => {
     const userId = req.user.id;
@@ -25,8 +34,8 @@ export default fp(async function (fastify) {
 
     const row = rows[0];
     return {
-      theme: row.theme || "light", 
-      allergens: row.allergens ? JSON.parse(row.allergens) : [],
+      theme: row.theme || "light",
+      allergens: row.allergens ? safeJSONParse(row.allergens, []) : [],
       user_inventory: !!row.user_inventory,
       shopping_list: !!row.shopping_list,
       lastUpdated: toISODate(row.updated_at),

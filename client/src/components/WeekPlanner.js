@@ -4,6 +4,7 @@ import { useDrop } from "react-dnd";
 import { toast } from "react-toastify";
 import { usePreferences } from "../contexts/PrefContext";
 import { usePlan } from "../contexts/PlanContext";
+import MealCard from "./MealCard";
 
 const mealTimes = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -20,7 +21,6 @@ function buildWeekDates(dateForWeekday) {
   });
 }
 
-// Simple confirm modal component
 function ConfirmModal({ open, title, message, onYes, onNo }) {
   if (!open) return null;
   return (
@@ -50,20 +50,42 @@ function ConfirmModal({ open, title, message, onYes, onNo }) {
   );
 }
 
-// Single cell in the planner grid that accepts drops
-function PlannerCell({ isoDate, dayLabel, mealTime, meals = [], onDropMeal, onSlotClick, onRemove, highlightedRecipe }) {
+function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, onRemove, highlightedRecipe }) {
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
     drop: (item) => {
-      const recipe = item.recipe || item;
+      const recipe = item?.recipe ?? item;
+      if (!recipe || (!recipe.id && !recipe.recipeId)) return;
       onDropMeal && onDropMeal(recipe, isoDate, mealTime);
       return undefined;
     },
-    collect: (m) => ({ isOver: m.isOver(), canDrop: m.canDrop() })
+    collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() })
   });
 
-  // Highlight cell if highlightedRecipe is set
   const highlight = highlightedRecipe !== null;
+
+  // Merge same meals in a cell
+  const mergedMeals = useMemo(() => {
+    const map = new Map();
+    meals.forEach((m, rawIndex) => {
+      const id = m.clientId ?? m.serverId ?? m.id ?? m.recipeId ?? `no-id-${rawIndex}`;
+      const prev = map.get(id);
+      if (prev) {
+        map.set(id, {
+          ...prev,
+          servings: (prev.servings ?? 0) + (m.servings ?? 1),
+          __sourceIndices: [...prev.__sourceIndices, rawIndex],
+        });
+      } else {
+        map.set(id, {
+          ...m,
+          servings: m.servings ?? 1,
+          __sourceIndices: [rawIndex],      // <- store the indices in the raw array
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [meals]);
 
   return (
     <td
@@ -79,51 +101,52 @@ function PlannerCell({ isoDate, dayLabel, mealTime, meals = [], onDropMeal, onSl
       }}
       onClick={() => highlight && onSlotClick && onSlotClick(isoDate, mealTime)}
     >
-      {meals.length === 0 ? (
+      {(!mergedMeals || mergedMeals.length === 0) ? (
         <div style={{ textAlign: "center", color: highlight ? "#8b5cf6" : "#94a3b8", fontSize: 12, marginBottom: 6 }}>
           + Add Meal
         </div>
       ) : (
-        meals.map((meal, idx) => {
-          const key = meal.id || meal.serverId || meal.clientId || `${isoDate}-${mealTime}-${idx}`;
+        mergedMeals.map((meal, idx) => {
+          const key = meal.clientId ? `c-${meal.clientId}` : `m-${meal.id ?? meal.recipeId ?? idx}`;
           return (
-            <div key={key} style={{
-              background: "rgba(139,92,246,0.06)",
-              border: "1px solid rgba(139,92,246,0.14)",
-              borderRadius: 6,
-              padding: "8px",
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8
-            }}>
-              <div style={{ overflow: "hidden", minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {meal.name}
-                </div>
-                {meal.calories != null && (
-                  <div style={{ color: "#6b7280", fontSize: 12 }}>
-                    {meal.calories} cal • {meal.protein ?? 0}g pro
-                  </div>
-                )}
-              </div>
-
+            <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <MealCard
+                item={meal}          // pass meal as item
+                compact={true}
+                isoDate={isoDate}
+                mealTime={mealTime}
+                onAddToPlan={onDropMeal}
+              />
               <button
-                onClick={() => onRemove && onRemove({ key: `${isoDate}-${mealTime}`, index: idx, serverId: meal.id || meal.serverId || null })}
-                style={{
-                  background: "rgba(239,68,68,0.12)",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 28,
-                  height: 28,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#ef4444",
-                  marginLeft: 8
+                onClick={() => {
+                  const key = `${isoDate}-${String(mealTime).toLowerCase()}`;
+                  const rawIndex =
+                    meal.__sourceIndices?.[0] ??
+                    meals.findIndex(x => {
+                      const getId = y => y.clientId ?? y.serverId ?? y.id ?? y.recipeId;
+                      return getId(x) === (meal.clientId ?? meal.serverId ?? meal.id ?? meal.recipeId);
+                    });
+
+                  onRemove && onRemove({
+                    key,
+                    index: rawIndex,
+                    serverId: meal.serverId ?? null,
+                    clientId: meal.clientId ?? null,
+                    recipeId: meal.id ?? meal.recipeId ?? null,
+                  });
                 }}
+                style={{
+                background: "rgba(239,68,68,0.12)",
+                border: "none",
+                borderRadius: "50%",
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#ef4444",
+                marginLeft: 8}}
                 title="Remove"
               >
                 <X style={{ width: 14, height: 14 }} />
@@ -139,55 +162,145 @@ function PlannerCell({ isoDate, dayLabel, mealTime, meals = [], onDropMeal, onSl
 export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotClick, ...rest }) {
   const weekDates = useMemo(() => buildWeekDates(dateForWeekday), [dateForWeekday]);
   const { prefs } = usePreferences();
-  const { plan, addMeal, removeMeal } = usePlan();
+  const { plan, addMeal, removeMeal, syncRange } = usePlan();
 
-  // local confirm modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null); // { recipe, isoDate, mealTime }
 
-  // Handler to actually persist pending drop after user confirms
+  // Confirm-and-add (used when allergen conflict)
   const confirmAndAdd = useCallback(async () => {
     if (!pending) { setConfirmOpen(false); return; }
     const { recipe, isoDate, mealTime } = pending;
     setConfirmOpen(false);
     setPending(null);
 
-    const res = await addMeal({ recipe, date: isoDate, mealType: mealTime, servings: recipe.servings || 1 });
-    if (res && res.ok) toast.success("Added to plan");
-    else toast.error("Failed to add to plan");
-  }, [pending, addMeal]);
+    // Use move/merge logic (same as drop handler)
+    await handleDropMeal(recipe, isoDate, mealTime);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, addMeal, removeMeal, plan]);
 
-  // Cancel pending
   const cancelPending = useCallback(() => {
     setPending(null);
     setConfirmOpen(false);
   }, []);
 
-  // Called when a recipe is dropped / added into a cell
   const handleDropMeal = useCallback(async (recipe, isoDate, mealTime) => {
-    // allergen checking
-    const userAllergens = (prefs?.allergens || []).map(a => a.toLowerCase());
-    const recipeAllergens = (recipe?.allergens || []).map(a => a.toLowerCase());
+    if (!recipe) return;
+
+    const safeMealTime = (mealTime || "unknown").toString().toLowerCase();
+    const targetKey = `${isoDate}-${safeMealTime}`;
+
+    // normalize functions
+    const getRecipeId = (r) => (r.recipeId ?? r.id ?? r.recipe_id ?? null);
+    const droppedRecipeId = getRecipeId(recipe);
+    const droppedServings = Number(recipe.servings ?? 1);
+
+    // allergen check
+    const userAllergens = Array.isArray(prefs?.allergens) ? prefs.allergens.map(a => a.toLowerCase()) : [];
+    const recipeAllergens = Array.isArray(recipe.allergens) ? recipe.allergens.map(a => a.toLowerCase()) : [];
     const conflict = recipeAllergens.some(a => userAllergens.includes(a));
     if (conflict) {
-      // show inline confirm modal
       setPending({ recipe, isoDate, mealTime });
       setConfirmOpen(true);
       return;
     }
 
-    // no conflict — add immediately
-    const res = await addMeal({ recipe, date: isoDate, mealType: mealTime, servings: recipe.servings || 1 });
-    if (res && res.ok) toast.success("Added to plan");
-    else toast.error("Failed to add to plan");
-  }, [prefs, addMeal]);
+    // find sourceKey if the dragged item came from planner (it may include date & mealType)
+    const sourceDate = recipe.date || recipe.scheduled_date || recipe.scheduledDate || null;
+    const sourceMealType = (recipe.mealType || recipe.meal_type || null);
+    const sourceKey = (sourceDate && sourceMealType) ? `${sourceDate}-${String(sourceMealType).toLowerCase()}` : null;
 
-  // Remove meal wrapper (calls PlanContext removeMeal)
-  const handleRemove = useCallback(async ({ key, index, serverId }) => {
-    // key is like "YYYY-MM-DD-MealTime"
-    await removeMeal({ key, index, serverId });
-    toast.info("Removed from plan");
-  }, [removeMeal]);
+    // find existing in target
+    const targetArr = Array.isArray(plan[targetKey]) ? [...plan[targetKey]] : [];
+    const existingIdx = targetArr.findIndex(it => String(getRecipeId(it)) === String(droppedRecipeId));
+
+    // if existing found -> we'll merge servings
+    if (existingIdx !== -1) {
+      const existing = targetArr[existingIdx];
+      const combinedServings = Number(existing.servings ?? 0) + droppedServings;
+
+      // remove existing entry first (so local display doesn't show duplicate)
+      try {
+        await removeMeal({ key: targetKey, index: existingIdx, serverId: existing.serverId ?? null });
+      } catch (err) {
+        console.warn("Failed to remove existing during merge", err);
+      }
+
+      // if the drop originated from a different cell, remove original too
+      if (sourceKey && sourceKey !== targetKey) {
+        // find index in source cell
+        const sourceArr = Array.isArray(plan[sourceKey]) ? [...plan[sourceKey]] : [];
+        const matchIdx = sourceArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId));
+        if (matchIdx !== -1) {
+          try {
+            await removeMeal({ key: sourceKey, index: matchIdx, serverId: sourceArr[matchIdx].serverId ?? null });
+          } catch (err) {
+            console.warn("Failed to remove original during merge", err);
+          }
+        }
+      }
+
+      // finally add combined entry (optimistic + server)
+      const res = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, combinedServings);
+      if (res?.ok) toast.success("Merged servings and saved to plan");
+      else toast.error("Failed to merge servings");
+      return;
+    }
+
+    // no existing in target:
+    // if the item came from another cell, remove original first then add to target (this avoids ghost)
+    if (sourceKey && sourceKey !== targetKey) {
+      // try to remove original matching clientId or serverId
+      const srcArr = Array.isArray(plan[sourceKey]) ? [...plan[sourceKey]] : [];
+      const matchIdx = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
+      if (matchIdx !== -1) {
+        try {
+          await removeMeal({ key: sourceKey, index: matchIdx, serverId: srcArr[matchIdx].serverId ?? null });
+        } catch (err) {
+          console.warn("Failed to remove original when moving", err);
+        }
+      }
+    }
+
+    // simply add dropped recipe to target (servings preserved)
+    const addRes = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, droppedServings);
+    if (addRes?.ok) toast.success("Added to plan");
+    else toast.error("Failed to add to plan");
+
+  }, [prefs, plan, addMeal, removeMeal]);
+
+  // expose an explicit refresh method from PlanContext when UI wants to refresh the week
+  const refreshWeek = useCallback(() => {
+    // compute current week range from weekDates and call syncRange if available
+    if (!weekDates || !weekDates.length) return;
+    const dates = weekDates.map(w => w.isoDate).filter(Boolean);
+    if (dates.length && typeof syncRange === "function") {
+      const sorted = [...dates].sort();
+      syncRange(sorted[0], sorted[sorted.length - 1]).catch((e) => console.warn("syncRange failed", e));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekDates]);
+
+  const handleRemove = useCallback(async ({ key, index, serverId, clientId, recipeId }) => {
+    const arr = Array.isArray(plan[key]) ? plan[key] : [];
+    let idx = typeof index === 'number' ? index : -1;
+    if (idx < 0 || idx >= arr.length) {
+      const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
+      const needle = clientId ?? serverId ?? recipeId ?? null;
+      if (needle != null) {
+        idx = arr.findIndex(x => getId(x) === needle);
+      }
+    }
+
+    if (idx < 0) return;
+    try {
+      await removeMeal({ key, index: idx, serverId: arr[idx]?.serverId ?? serverId ?? null });
+      toast.info("Removed from plan");
+    } catch (err) {
+      toast.error("Failed to remove from server");
+      console.warn(err);
+    }
+  }, [plan, removeMeal]);
 
   return (
     <div style={{ padding: 16 }}>
@@ -199,7 +312,12 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
         onNo={cancelPending}
       />
 
-      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Weekly Planner</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Weekly Planner</h2>
+        <div>
+          <button onClick={refreshWeek} style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#eef2ff", cursor: "pointer" }}>Refresh</button>
+        </div>
+      </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
@@ -226,15 +344,14 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
               }}>{mealTime}</td>
 
               {weekDates.map(({ weekdayKey, isoDate }, idx) => {
-                // key string that PlanContext uses
-                const key = `${isoDate || weekdayKey}-${mealTime}`;
-                const meals = plan[key] || [];
+                const normalizedMealTime = mealTime.toLowerCase();
+                const cellKey = `${isoDate}-${normalizedMealTime}`;
+                const meals = Array.isArray(plan[cellKey]) ? plan[cellKey] : [];
 
                 return (
                   <PlannerCell
-                    key={key + "-" + idx}
-                    isoDate={isoDate || weekdayKey}
-                    dayLabel={weekdayKey}
+                    key={cellKey + "-" + idx}
+                    isoDate={isoDate}
                     mealTime={mealTime}
                     meals={meals}
                     onDropMeal={handleDropMeal}

@@ -10,13 +10,12 @@ export default fp(async function (fastify, opts) {
   }
 
   // Rate limit for this route only
-  await fastify.register(rateLimit, {
-    max: 10,
-    timeWindow: '1 minute',
-  });
+  await fastify.register(rateLimit)
 
   // REGISTER
-  fastify.post('/api/register', async (request, reply) => {
+  fastify.post('/api/register', {
+    preHandler: fastify.rateLimit({ max: 10, timeWindow: '1 minute' })
+  }, async (request, reply) => {
     try {
       if (request.headers['content-type'] !== 'application/json') {
         return reply.status(400).send({ error: 'Invalid Content-Type' });
@@ -71,7 +70,9 @@ export default fp(async function (fastify, opts) {
   });
 
   // LOGIN
-  fastify.post('/api/login', async (request, reply) => {
+  fastify.post('/api/login', {
+    preHandler: fastify.rateLimit({ max: 10, timeWindow: '1 minute' })
+  }, async (request, reply) => {
     try {
       if (request.headers['content-type'] !== 'application/json') {
         return reply.status(400).send({ error: 'Invalid Content-Type' });

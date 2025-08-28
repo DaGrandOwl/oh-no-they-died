@@ -39,10 +39,9 @@ function nextDateForWeekday(weekday) {
 }
 
 function RecipeResultCard({ recipe, onStartHighlight, onClearHighlight }) {
-  const [, dragRef] = useDrag({
+  const [, dragRef] = useDrag(() => ({
     type: "RECIPE",
-    item: { recipe },
-    begin: () => {
+    item: () => {
       onStartHighlight(recipe);
       return { recipe };
     },
@@ -50,7 +49,7 @@ function RecipeResultCard({ recipe, onStartHighlight, onClearHighlight }) {
       onClearHighlight();
     },
     collect: () => ({})
-  });
+  }));
 
   return (
     <div
@@ -205,16 +204,21 @@ export default function Recommendations() {
   async function handleAddRecipeToPlan(recipe, date, mealTime) {
     try {
       // allergen check (use user's prefs)
-      const userAllergens = (prefs?.allergens || []).map(a => a.toLowerCase());
-      const recipeAllergens = (recipe.allergens || []).map(a => a.toLowerCase());
+      function toArray(val) {
+        if (!val) return [];
+        if (Array.isArray(val)) {
+          return val.filter(v => typeof v === "string" && v.trim() !== "");
+        }
+        if (typeof val === "string") {
+          return val.split(",").map(s => s.trim()).filter(s => s.length > 0);
+        }
+        return [];
+      }
+      const userAllergens = toArray(prefs?.allergens).map(a => a.toLowerCase());
+      const recipeAllergens = toArray(recipe.allergens).map(a => a.toLowerCase());
       const hasBad = recipeAllergens.some(a => userAllergens.includes(a));
       const doAdd = async () => {
-        const res = await addMeal({
-          recipe,
-          date,
-          mealType: mealTime,
-          servings: recipe.servings ?? 1
-        });
+        const res = await addMeal(recipe, date, mealTime, recipe.servings ?? 1);
         if (res.ok) toast.success("Added to plan");
         else toast.error("Failed to add to plan");
       };
