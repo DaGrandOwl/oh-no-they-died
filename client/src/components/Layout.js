@@ -4,22 +4,26 @@ import {
   ShoppingCart,
   Utensils,
   Settings,
-  Sparkles
+  Sparkles,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { usePreferences } from '../contexts/PrefContext';
 
-// Styles for the sidebar (moved from Home.js)
 const sidebarStyles = {
   sidebar: {
-    width: '280px',
-    background: 'rgba(15, 23, 42, 0.8)',
-    backdropFilter: 'blur(10px)',
-    borderRight: '1px solid rgba(148, 163, 184, 0.1)',
-    padding: '1.5rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem'
-  },
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  bottom: 0,
+  width: '280px',
+  background: 'linear-gradient(180deg, #0f172a, #1e293b)',
+  borderRight: '1px solid rgba(148, 163, 184, 0.1)',
+  padding: '1.5rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1.5rem'
+},
   brand: {
     display: 'flex',
     alignItems: 'center',
@@ -77,15 +81,29 @@ const sidebarStyles = {
   navItemDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed'
+  },
+  themeCard: {
+    background: 'rgba(30, 41, 59, 0.6)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '1rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)',
+    padding: '1rem',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
   }
 };
 
-const Layout = () => {
-  const { prefs } = usePreferences();
-  
-  // Determine active nav item based on current route
+  const Layout = () => {
+  const { prefs, setPrefs } = usePreferences();
+
+
+  const toggleTheme = () => {
+    setPrefs({ ...prefs, theme: prefs.theme === 'dark' ? 'light' : 'dark' });
+  };
+
   const getActiveNav = (path) => {
-    return window.location.pathname === path ? sidebarStyles.navItemActive : {};
+    return window.location.pathname.startsWith(path)
+      ? sidebarStyles.navItemActive
+      : {};
   };
 
   return (
@@ -109,7 +127,7 @@ const Layout = () => {
             <ShoppingCart style={{width: '1rem', height: '1rem'}} />
             Groceries
           </button>
-          <a href="/recipe/1" style={{...sidebarStyles.navItem, ...getActiveNav('/recipe')}}> //change later
+          <a href="/recipe/1" style={{...sidebarStyles.navItem, ...getActiveNav('/recipe')}}> 
             <Utensils style={{width: '1rem', height: '1rem'}} />
             Recipes
           </a>
@@ -120,14 +138,7 @@ const Layout = () => {
         </nav>
 
         {/* Theme info card */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '1rem',
-          border: '1px solid rgba(148, 163, 184, 0.1)',
-          padding: '1rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}>
+        <div style={sidebarStyles.themeCard}>
           <div style={{
             fontSize: '0.875rem',
             fontWeight: '600',
@@ -148,11 +159,36 @@ const Layout = () => {
             Change in Settings
           </div>
         </div>
+
+        {/* Dark mode switch */}
+        <button 
+          onClick={toggleTheme}
+          style={{
+            marginTop: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.5rem',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: 'rgba(30, 41, 59, 0.6)',
+            color: '#f8fafc',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          {prefs.theme === 'dark' ? (
+            <Sun style={{width: '1rem', height: '1rem'}} />
+          ) : (
+            <Moon style={{width: '1rem', height: '1rem'}} />
+          )}
+          Toggle {prefs.theme === 'dark' ? 'Light' : 'Dark'} Mode
+        </button>
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        <Outlet /> {/* This is where page content will be rendered */}
+      <main style={{ flex: 1, marginLeft: '280px', overflow: 'auto' }}>
+        <Outlet />
       </main>
     </div>
   );
