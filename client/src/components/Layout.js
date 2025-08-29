@@ -1,113 +1,119 @@
-import { Outlet } from 'react-router-dom';
-import { 
-  Calendar, 
+import { Outlet, NavLink } from "react-router-dom";
+import {
+  Calendar,
   ShoppingCart,
   Utensils,
   Settings,
   Sparkles,
   Moon,
-  Sun
-} from 'lucide-react';
-import { usePreferences } from '../contexts/PrefContext';
+  Sun,
+} from "lucide-react";
+import { usePreferences } from "../contexts/PrefContext";
 
 const sidebarStyles = {
   sidebar: {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  bottom: 0,
-  width: '280px',
-  background: 'linear-gradient(180deg, #0f172a, #1e293b)',
-  borderRight: '1px solid rgba(148, 163, 184, 0.1)',
-  padding: '1.5rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.5rem'
-},
+    position: "fixed",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "280px",
+    background: "linear-gradient(180deg, #0f172a, #1e293b)",
+    borderRight: "1px solid rgba(148, 163, 184, 0.1)",
+    padding: "1.5rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.5rem",
+    boxSizing: "border-box",
+    zIndex: 20,
+  },
   brand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    paddingBottom: '1rem',
-    borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    paddingBottom: "1rem",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.06)",
   },
   logo: {
-    width: '2.5rem',
-    height: '2.5rem',
-    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-    borderRadius: '0.75rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '1.125rem',
-    fontWeight: 'bold'
+    width: "2.5rem",
+    height: "2.5rem",
+    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+    borderRadius: "0.75rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "1.125rem",
+    fontWeight: "bold",
+    color: "#fff",
   },
   brandText: {
-    fontSize: '1.25rem',
-    fontWeight: '700',
-    color: '#f8fafc',
-    margin: 0
+    fontSize: "1.25rem",
+    fontWeight: "700",
+    color: "#f8fafc",
+    margin: 0,
   },
   brandSub: {
-    fontSize: '0.875rem',
-    color: '#94a3b8',
-    margin: 0
+    fontSize: "0.875rem",
+    color: "#94a3b8",
+    margin: 0,
   },
   nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem'
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
   },
   navItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '0.75rem 1rem',
-    borderRadius: '0.5rem',
-    textDecoration: 'none',
-    color: '#94a3b8',
-    transition: 'all 0.2s',
-    cursor: 'pointer',
-    border: 'none',
-    background: 'none',
-    width: '100%',
-    fontSize: '0.875rem'
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    padding: "0.75rem 1rem",
+    borderRadius: "0.5rem",
+    textDecoration: "none",
+    color: "#94a3b8",
+    transition: "all 0.15s ease",
+    cursor: "pointer",
+    border: "none",
+    background: "none",
+    width: "100%",
+    fontSize: "0.875rem",
+    boxSizing: "border-box",
   },
   navItemActive: {
-    background: 'rgba(139, 92, 246, 0.2)',
-    color: '#a78bfa',
-    borderLeft: '3px solid #8b5cf6'
+    background: "rgba(139, 92, 246, 0.18)",
+    color: "#a78bfa",
+    borderLeft: "3px solid #8b5cf6",
+    paddingLeft: "0.75rem",
   },
   navItemDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed'
+    opacity: 0.6,
+    cursor: "not-allowed",
   },
   themeCard: {
-    background: 'rgba(30, 41, 59, 0.6)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '1rem',
-    border: '1px solid rgba(148, 163, 184, 0.1)',
-    padding: '1rem',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-  }
+    background: "rgba(30, 41, 59, 0.55)",
+    backdropFilter: "blur(8px)",
+    borderRadius: "1rem",
+    border: "1px solid rgba(148, 163, 184, 0.06)",
+    padding: "1rem",
+    boxShadow: "0 6px 18px rgba(2,6,23,0.25)",
+  },
 };
 
-  const Layout = () => {
-  const { prefs, setPrefs } = usePreferences();
-
+const Layout = () => {
+  const { prefs, updatePrefs } = usePreferences();
 
   const toggleTheme = () => {
-    setPrefs({ ...prefs, theme: prefs.theme === 'dark' ? 'light' : 'dark' });
+    const current = prefs?.theme === "dark" ? "dark" : "light";
+    updatePrefs({ theme: current === "dark" ? "light" : "dark" });
   };
 
-  const getActiveNav = (path) => {
-    return window.location.pathname.startsWith(path)
-      ? sidebarStyles.navItemActive
-      : {};
-  };
+  const navLinkStyle = ({ isActive }) => ({
+    ...sidebarStyles.navItem,
+    ...(isActive ? sidebarStyles.navItemActive : {}),
+  });
+
+  const themeLabel = prefs?.theme === "dark" ? "Dark" : "Light";
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Sidebar */}
       <aside style={sidebarStyles.sidebar}>
         <div style={sidebarStyles.brand}>
@@ -119,75 +125,80 @@ const sidebarStyles = {
         </div>
 
         <nav style={sidebarStyles.nav}>
-          <a href="/home" style={{...sidebarStyles.navItem, ...getActiveNav('/home')}}>
-            <Calendar style={{width: '1rem', height: '1rem'}} />
+          <NavLink to="/home" style={navLinkStyle}>
+            <Calendar style={{ width: "1rem", height: "1rem" }} />
             Weekly Planner
-          </a>
-          <button style={{...sidebarStyles.navItem, ...sidebarStyles.navItemDisabled}}>
-            <ShoppingCart style={{width: '1rem', height: '1rem'}} />
+          </NavLink>
+
+          <button style={{ ...sidebarStyles.navItem, ...sidebarStyles.navItemDisabled }} disabled>
+            <ShoppingCart style={{ width: "1rem", height: "1rem" }} />
             Groceries
           </button>
-          <a href="/recipe/1" style={{...sidebarStyles.navItem, ...getActiveNav('/recipe')}}> 
-            <Utensils style={{width: '1rem', height: '1rem'}} />
+
+          <NavLink to="/recipe" style={navLinkStyle}>
+            <Utensils style={{ width: "1rem", height: "1rem" }} />
             Recipes
-          </a>
-          <a href="/settings" style={{...sidebarStyles.navItem, ...getActiveNav('/settings')}}>
-            <Settings style={{width: '1rem', height: '1rem'}} />
+          </NavLink>
+
+          <NavLink to="/settings" style={navLinkStyle}>
+            <Settings style={{ width: "1rem", height: "1rem" }} />
             Settings
-          </a>
+          </NavLink>
         </nav>
 
         {/* Theme info card */}
         <div style={sidebarStyles.themeCard}>
-          <div style={{
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#f8fafc',
-            margin: '0 0 0.5rem 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <Sparkles style={{width: '1rem', height: '1rem', color: '#a78bfa'}} />
-            Current Theme: {prefs.theme === 'dark' ? 'Dark' : 'Light'}
+          <div
+            style={{
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "#f8fafc",
+              margin: "0 0 0.5rem 0",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <Sparkles style={{ width: "1rem", height: "1rem", color: "#a78bfa" }} />
+            Current Theme: {themeLabel}
           </div>
-          <div style={{
-            fontSize: '0.75rem',
-            color: '#94a3b8',
-            lineHeight: '1.4'
-          }}>
-            Change in Settings
+          <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: "1.4" }}>
+            Toggle theme directly below or change in Settings.
           </div>
         </div>
 
-        {/* Dark mode switch */}
-        <button 
+        {/* Dark mode switch - kept at bottom */}
+        <button
           onClick={toggleTheme}
           style={{
-            marginTop: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            background: 'rgba(30, 41, 59, 0.6)',
-            color: '#f8fafc',
-            cursor: 'pointer',
-            fontSize: '0.875rem'
+            marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.75rem 1rem",
+            borderRadius: "0.5rem",
+            border: "1px solid rgba(148, 163, 184, 0.12)",
+            background: "rgba(30, 41, 59, 0.6)",
+            color: "#f8fafc",
+            cursor: "pointer",
+            fontSize: "0.875rem",
+            width: "100%",
+            boxSizing: "border-box",
           }}
+          aria-label="Toggle theme"
+          title={`Switch to ${prefs?.theme === "dark" ? "light" : "dark"} mode`}
         >
-          {prefs.theme === 'dark' ? (
-            <Sun style={{width: '1rem', height: '1rem'}} />
+          {prefs?.theme === "dark" ? (
+            <Sun style={{ width: "1rem", height: "1rem" }} />
           ) : (
-            <Moon style={{width: '1rem', height: '1rem'}} />
+            <Moon style={{ width: "1rem", height: "1rem" }} />
           )}
-          Toggle {prefs.theme === 'dark' ? 'Light' : 'Dark'} Mode
+          Toggle {prefs?.theme === "dark" ? "Light" : "Dark"} Mode
         </button>
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, marginLeft: '280px', overflow: 'auto' }}>
+      <main style={{ flex: 1, marginLeft: "280px", overflow: "auto", minHeight: "100vh" }}>
         <Outlet />
       </main>
     </div>

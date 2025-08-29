@@ -8,6 +8,7 @@ import recipeRoutes from './routes/recipe.js';
 import userRoutes from './routes/users.js';
 import preferenceRoutes from './routes/preferences.js';
 import mealplanRoutes from './routes/mealplan.js';
+import inventoryRoutes from './routes/inventory.js';
 import recommendRoutes from './routes/recommend.js';
 
 dotenv.config();
@@ -45,6 +46,7 @@ await fastify.register(userRoutes);
 await fastify.register(preferenceRoutes);
 await fastify.register(mealplanRoutes);
 await fastify.register(recommendRoutes);
+await fastify.register(inventoryRoutes);
 
 //Root route
 fastify.get('/', async (request, reply) => {

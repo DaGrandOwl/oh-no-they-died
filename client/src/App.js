@@ -10,6 +10,7 @@ import RecipeID from './pages/RecipeID.js';
 import RecipeList from './pages/RecipeList.js';
 import Onboarding from './pages/Onboarding.js';
 import Settings from './pages/Settings.js';
+import Inventory from './pages/Inventory.js';
 // Components
 import PrivateRoute from './components/PrivateRoute';
 import Recommendations from './pages/Recommendations.js';
@@ -25,6 +26,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/settings" element={<Settings />} />   
+          <Route path="/inventory" element={<Inventory />} /> 
 
           <Route path="/test" element={<Recommendations />} /> {/* temp */}
           

@@ -18,7 +18,7 @@ export default fp(async function (fastify) {
   fastify.get("/api/recommendations", { preHandler: [optionalAuth] }, async (request, reply) => {
     try {
       const { calories, carbs, protein, fat, cuisine, mealType, maxCost, inventoryMatch, servings } = request.query || {};
-      let sql = `SELECT rg.*, ri.base_servings, ri.appx_mass, ri.image AS image FROM recipe_general rg LEFT JOIN recipe_instructions ri ON ri.recipe_id = rg.id`;
+
       const params = [];
       const conditions = [];
 
@@ -38,9 +38,12 @@ export default fp(async function (fastify) {
       if (fat) { conditions.push(`rg.fat <= ?`); params.push(parseFloat(fat)); }
       if (maxCost) { conditions.push(`rg.appx_cost <= ?`); params.push(parseFloat(maxCost)); }
 
+      // Diet & allergens filter
       if (request.user) {
         const userDiet = request.user.diet_type || "any";
-        const userAllergies = Array.isArray(request.user.allergens) ? request.user.allergens : (request.user.allergens || "").split(",").map(a => a.trim()).filter(Boolean);
+        const userAllergies = Array.isArray(request.user.allergens)
+          ? request.user.allergens
+          : (request.user.allergens || "").split(",").map(a => a.trim()).filter(Boolean);
 
         if (userDiet && userDiet !== "any") {
           const diets = String(userDiet).split(",").map(d => d.trim()).filter(Boolean);
@@ -57,30 +60,54 @@ export default fp(async function (fastify) {
         });
       }
 
+      // Base SELECT
+      let sql = `SELECT 
+        rg.id,
+        ANY_VALUE(rg.name) AS name,
+        ANY_VALUE(rg.calories) AS calories,
+        ANY_VALUE(rg.protein) AS protein,
+        ANY_VALUE(rg.carbs) AS carbs,
+        ANY_VALUE(rg.fat) AS fat,
+        ANY_VALUE(rg.appx_cost) AS appx_cost,
+        ANY_VALUE(rg.allergens) AS allergens,
+        ANY_VALUE(rg.diet_type) AS diet_type,
+        ANY_VALUE(ri.base_servings) AS base_servings,
+        ANY_VALUE(ri.appx_mass) AS appx_mass,        
+        ANY_VALUE(ri.image) AS image
+      FROM recipe_general rg
+      LEFT JOIN recipe_instructions ri ON ri.recipe_id = rg.id
+      LEFT JOIN recipe_ingredients AS ri2 ON rg.id = ri2.recipe_id
+      `;
+
+      // WHERE
+      if (conditions.length) {
+        sql += " WHERE " + conditions.join(" AND ");
+      }
+
+      // Inventory join & HAVING
       if (inventoryMatch === "true" && request.user) {
-        sql += ` JOIN recipe_ingredients AS ri2 ON rg.id = ri2.recipe_id`;
-        sql += ` LEFT JOIN user_inventory AS ui ON ri2.item_name = ui.item_name AND ui.user_id = ?`;
+        sql += ` LEFT JOIN user_inventory AS ui ON ui.user_id = ? AND ui.item_name = ri2.item_name`;
         params.push(request.user.id);
       }
 
-      if (conditions.length) sql += " WHERE " + conditions.join(" AND ");
+      // GROUP BY
+      sql += " GROUP BY rg.id";
 
       if (inventoryMatch === "true" && request.user) {
-        sql += ` GROUP BY rg.id HAVING SUM(ui.quantity IS NOT NULL) >= 0.8 * COUNT(ri2.id)`;
+        sql += ` HAVING (SUM(ui.quantity IS NOT NULL) >= 0.8 * COUNT(ri2.id))
+                 AND (SUM(CASE WHEN (ri2.notes LIKE '%main%' OR ri2.notes LIKE '%main:%' OR ri2.notes LIKE '%main;%') AND ui.quantity IS NULL THEN 1 ELSE 0 END) = 0)`;
       }
 
-      sql += ` ORDER BY ABS(rg.calories - ?) ASC, RAND() LIMIT 10`;
+      // ORDER
+      sql += ` ORDER BY ABS(rg.calories - ?) ASC, RAND() LIMIT 5`;
       params.push(parseFloat(calories) || 0);
 
       const [rows] = await fastify.db.query(sql, params);
 
-      // normalize rows, parse allergens & diet_type arrays, compute recommended_servings
       const desiredServings = servings != null ? Number(servings) : null;
-
       const normalized = (rows || []).map(r => {
-        const baseServ = (r.base_servings != null) ? Number(r.base_servings) : null;
-        const recommended_servings = desiredServings ? Math.max(1, Math.round(desiredServings)) : Math.max(1, Math.round(baseServ || 1));
-
+        const baseServ = r.base_servings != null ? Number(r.base_servings) : 1;
+        const recommended_servings = desiredServings ? Math.max(1, Math.round(desiredServings)) : Math.max(1, Math.round(baseServ));
         return {
           id: r.id,
           name: r.name,
@@ -99,6 +126,7 @@ export default fp(async function (fastify) {
       });
 
       reply.send(normalized);
+
     } catch (err) {
       fastify.log.error(err);
       reply.code(500).send({ error: "Server error" });

@@ -1,6 +1,6 @@
-// PlanContext.js
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useAuth } from "./AuthContext";
+import { toast } from "react-toastify";
 
 const PlanContext = createContext();
 
@@ -14,28 +14,19 @@ function safeParseJSON(s, fallback = {}) {
   }
 }
 
-/**
- * Load local plan from localStorage and normalize shape:
- * - ensure every key maps to an array
- * - migrate keys like "YYYY-MM-DD-Breakfast" -> "YYYY-MM-DD-breakfast"
- */
 function loadLocalPlan() {
   try {
     const raw = safeParseJSON(localStorage.getItem("mealPlan") || "{}", {});
     const normalized = {};
 
     for (const key of Object.keys(raw)) {
-      // migrate mealType part to lowercase if possible
-      // expect keys in form "<date>-<mealType>" but be tolerant
       const parts = String(key).split("-");
       if (parts.length >= 2) {
         const datePart = parts.slice(0, 3).length === 3 && /^\d{4}$/.test(parts[0]) ? parts.slice(0, 3).join('-') : parts[0];
-        // fallback: treat last part as mealType
-        const mealPart = parts.slice(1).join("-"); // everything after first dash
+        const mealPart = parts.slice(1).join("-");
         const safeKey = `${datePart}-${mealPart.toLowerCase()}`;
         normalized[safeKey] = Array.isArray(raw[key]) ? raw[key] : [];
       } else {
-        // unrecognised key: keep as-is but ensure array
         normalized[key] = Array.isArray(raw[key]) ? raw[key] : [];
       }
     }
@@ -61,28 +52,43 @@ function isValidDateYYYYMMDD(s) {
   return !Number.isNaN(d.getTime());
 }
 
-/**
- * return { start, end } for current week (Sunday-Saturday) in YYYY-MM-DD
- */
 function getCurrentWeekRange() {
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const dayOfWeek = today.getDay();
   const sunday = new Date(today);
   sunday.setDate(today.getDate() - dayOfWeek);
   const saturday = new Date(sunday);
   saturday.setDate(sunday.getDate() + 6);
-
   const toYMD = (d) => d.toISOString().slice(0, 10);
   return { start: toYMD(sunday), end: toYMD(saturday) };
 }
 
-/**
- * parse ISO-ish timestamps safely to millis
- */
 function parseTime(s) {
   if (!s) return 0;
   const t = Date.parse(s);
   return Number.isNaN(t) ? 0 : t;
+}
+
+/* --- Inventory helpers (local backup + server sync) --- */
+
+function loadLocalInventory() {
+  return safeParseJSON(localStorage.getItem("inventory") || "{}", {});
+}
+
+function saveLocalInventory(inv) {
+  try {
+    localStorage.setItem("inventory", JSON.stringify(inv));
+  } catch {}
+}
+
+// helper to read user's preferences quickly (non-hook) from localStorage
+function readPrefsLocal() {
+  try {
+    const p = safeParseJSON(localStorage.getItem("preferences") || "{}", {});
+    return p;
+  } catch {
+    return {};
+  }
 }
 
 /* --- Context provider --- */
@@ -91,6 +97,15 @@ export function PlanProvider({ children }) {
   const { token } = useAuth();
   const [plan, setPlan] = useState(() => loadLocalPlan());
   const [loading, setLoading] = useState(false);
+
+  // inventory (kept locally; sync attempts made if token present)
+  // shape: { "<item_name>": number, ... }
+  const [inventory, setInventory] = useState(() => loadLocalInventory());
+
+  useEffect(() => {
+    // persist inventory on changes
+    saveLocalInventory(inventory);
+  }, [inventory]);
 
   // helper: add locally and persist
   const addLocal = useCallback((key, entry) => {
@@ -103,19 +118,9 @@ export function PlanProvider({ children }) {
     });
   }, []);
 
-  /**
-   * Merge server items into local plan with simple timestamp logic:
-   * - For each server item mapped to a key:
-   *    * try to find local item matched by clientId or serverId
-   *    * if found compare server.created_at > local.addedAt => replace local item
-   *    * otherwise keep local (optimistic)
-   *    * if not found push server item
-   */
   const mergeServerIntoLocal = useCallback((serverRows) => {
     setPlan((prevLocal) => {
       const next = { ...prevLocal };
-
-      // normalizedServer keyed by "YYYY-MM-DD-mealtype"
       const normalizedServer = {};
       (Array.isArray(serverRows) ? serverRows : []).forEach((r) => {
         const date = r.date;
@@ -123,13 +128,10 @@ export function PlanProvider({ children }) {
         const key = `${date}-${mealType}`;
         normalizedServer[key] = normalizedServer[key] || [];
 
-        // map server row into client-friendly shape
         const mapped = {
-          // server row id (mealplan record)
           serverId: r.id ?? r.serverId ?? null,
-          // recipe id (used by MealCard as `id`)
           recipeId: r.recipeId ?? r.recipe_id ?? r.recipeId ?? null,
-          id: r.recipeId ?? r.recipe_id ?? r.id ?? r.recipeId ?? null, // keep `id` as recipe id for UI compatibility
+          id: r.recipeId ?? r.recipe_id ?? r.id ?? r.recipeId ?? null,
           name: r.name ?? r.title ?? null,
           image: r.image ?? null,
           calories: r.calories ?? null,
@@ -146,13 +148,11 @@ export function PlanProvider({ children }) {
         normalizedServer[key].push(mapped);
       });
 
-      // merge each server key into next
       Object.keys(normalizedServer).forEach((key) => {
         const serverItems = normalizedServer[key];
         const localItems = Array.isArray(next[key]) ? [...next[key]] : [];
 
         serverItems.forEach((sItem) => {
-          // try match by serverId -> clientId -> recipeId + created_at
           const idxByServerId = localItems.findIndex(li => li.serverId && sItem.serverId && li.serverId === sItem.serverId);
           const idxByClientId = localItems.findIndex(li => li.clientId && sItem.clientId && li.clientId === sItem.clientId);
           const idxByRecipe = localItems.findIndex(li => (li.recipeId || li.id) && (sItem.recipeId || sItem.id) && String(li.recipeId || li.id) === String(sItem.recipeId || sItem.id));
@@ -168,17 +168,13 @@ export function PlanProvider({ children }) {
             const serverTime = parseTime(sItem.created_at || sItem.createdAt || 0);
 
             if (serverTime > localTime) {
-              // server wins: replace/merge preserving clientId if present
               localItems[idx] = { ...local, ...sItem, clientId: local.clientId ?? null };
             } else {
-              // keep local optimistic item
-              // but if local doesn't have serverId and server does provide one, attach it (server accepted earlier entry)
               if (!local.serverId && sItem.serverId) {
                 localItems[idx] = { ...localItems[idx], serverId: sItem.serverId };
               }
             }
           } else {
-            // no local match: push server item
             localItems.push(sItem);
           }
         });
@@ -191,10 +187,6 @@ export function PlanProvider({ children }) {
     });
   }, []);
 
-  /**
-   * syncRange(start,end) - fetch server-side items for the range and merge them into local
-   * start,end format: YYYY-MM-DD (inclusive)
-   */
   const syncRange = useCallback(async (start, end) => {
     if (!token) return;
     if (start && !isValidDateYYYYMMDD(start)) return;
@@ -216,7 +208,6 @@ export function PlanProvider({ children }) {
         return;
       }
       const serverRows = await res.json();
-      // merge server rows into local
       mergeServerIntoLocal(serverRows);
     } catch (err) {
       if (err.name !== "AbortError") console.error("syncRange failed", err);
@@ -226,7 +217,6 @@ export function PlanProvider({ children }) {
     return () => ac.abort();
   }, [token, mergeServerIntoLocal]);
 
-  // On token available, auto-sync current week so WeekPlanner has data without manual call
   useEffect(() => {
     if (!token) return;
     const { start, end } = getCurrentWeekRange();
@@ -234,7 +224,138 @@ export function PlanProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // addMeal: optimistic local add, then persist to server; on success merge server response into local entry
+  /* --- Inventory: core function to adjust inventory for a recipe --- */
+  async function adjustInventoryForRecipe(recipeLike, servingsDelta) {
+    // recipeLike should include id and base_servings ideally
+    const recipeId = recipeLike?.id ?? recipeLike?.recipeId ?? null;
+    const base_servings = recipeLike?.base_servings ?? recipeLike?.recommended_servings ?? 1;
+    if (!recipeId || !servingsDelta) return [];
+
+    // check user preference (read local prefs)
+    const prefs = readPrefsLocal();
+    if (!prefs.user_inventory) {
+      // inventory tracking disabled — no-op
+      return [];
+    }
+
+    // fetch recipe ingredients (defensive; backend must implement endpoint)
+    let ingPayload = null;
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/recipes/${recipeId}/ingredients`);
+      if (!res.ok) {
+        // no ingredient data available: cannot adjust
+        console.warn("No ingredients endpoint or failed to fetch ingredients for recipe", recipeId);
+      } else {
+        ingPayload = await res.json();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch recipe ingredients", err);
+      ingPayload = null;
+    }
+
+    // Normalize payload: backend might return { ok: true, ingredients: [...] } or an array directly
+    let ingList = [];
+    if (Array.isArray(ingPayload)) {
+      ingList = ingPayload;
+    } else if (ingPayload && Array.isArray(ingPayload.ingredients)) {
+      ingList = ingPayload.ingredients;
+    } else {
+      ingList = [];
+    }
+
+    if (!Array.isArray(ingList) || ingList.length === 0) {
+      // no ingredients to adjust
+      return [];
+    }
+
+    // derive base_servings if available in payload / ingredient row
+    const candidateBase = ingList[0]?.base_servings ?? ingPayload?.base_servings ?? base_servings ?? 1;
+    const baseServings = Number(candidateBase || 1);
+
+    // Build adjustments: deltaAmount = ingredient.amount * (servingsDelta/base_servings)
+    // Note: in our convention, we use negative delta to *consume* inventory (server expects delta numeric)
+    const adjustments = [];
+    for (const ing of ingList) {
+      const itemName = ing.item_name || null;
+      if (!itemName) continue;
+      // try to find numeric amount field
+      const rawAmt = ing.quantity || 0;
+      const numeric = Number(rawAmt) || 0;
+      const qtyToAdjust = numeric * (servingsDelta / (Number(baseServings) || 1));
+      if (qtyToAdjust === 0) continue;
+      // when servingsDelta > 0 we want to consume, so delta = -qtyToAdjust
+      // when servingsDelta < 0 we want to restore, so delta = - (negative) => positive
+      adjustments.push({ item_name: itemName, delta: -qtyToAdjust, unit: ing.unit || null });
+    }
+
+    if (adjustments.length === 0) return [];
+
+    // Apply to local inventory (optimistic)
+    setInventory((prevInv) => {
+      const next = { ...(prevInv || {}) };
+      for (const adj of adjustments) {
+        const cur = Number(next[adj.item_name] ?? 0);
+        const nextVal = cur + adj.delta; // adj.delta negative => consume
+        next[adj.item_name] = Number.isFinite(nextVal) ? nextVal : cur;
+      }
+      saveLocalInventory(next);
+      return next;
+    });
+
+    // Try to notify backend (defensive)
+    if (token) {
+      try {
+        const resAdj = await fetch(`${process.env.REACT_APP_API_URL}/api/user/inventory/adjust`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ adjustments: adjustments.map(a => ({ item_name: a.item_name, delta: a.delta, unit: a.unit })) })
+        });
+
+        if (resAdj.ok) {
+          const payload = await resAdj.json();
+          // Optionally merge server returned rows into local mapping to keep authoritative values
+          if (Array.isArray(payload.updated)) {
+            setInventory((prevInv) => {
+              const next = { ...(prevInv || {}) };
+              for (const row of payload.updated) {
+                if (row && row.item_name) {
+                  next[row.item_name] = Number(row.quantity ?? next[row.item_name] ?? 0);
+                }
+              }
+              saveLocalInventory(next);
+              return next;
+            });
+          }
+        } else {
+          const t = await resAdj.text().catch(() => "");
+          console.warn("Inventory adjust endpoint returned error:", t);
+        }
+      } catch (err) {
+        console.warn("Failed to sync inventory adjustments to server", err);
+      }
+    }
+
+    // compute negative items to report
+    const afterInv = loadLocalInventory();
+    const negatives = [];
+    for (const adj of adjustments) {
+      const v = Number(afterInv[adj.item_name] ?? 0);
+      if (v < 0) negatives.push({ item_name: adj.item_name, value: v });
+    }
+
+    if (negatives.length > 0) {
+      // warn user with a friendly toast
+      toast.warn(`Inventory low: ${negatives.map(n => `${n.item_name} (${Math.round(n.value)})`).join(", ")}`, { autoClose: 6000 });
+    }
+
+    return negatives;
+  }
+
+  /* --- Core plan functions --- */
+
   async function addMeal(meal, date, mealType, servings) {
     const safeMealType = (mealType || "unknown").toString().toLowerCase();
     const key = `${date}-${safeMealType}`;
@@ -254,8 +375,19 @@ export function PlanProvider({ children }) {
       addedAt: new Date().toISOString(),
     };
 
-    // optimistic add
+    // optimistic add local
     addLocal(key, entry);
+
+    // If inventory tracking is enabled, adjust inventory (consume)
+    try {
+      const prefs = readPrefsLocal();
+      if (prefs.user_inventory) {
+        // call adjustInventoryForRecipe with positive servings => consumption
+        await adjustInventoryForRecipe({ id: entry.recipeId, base_servings: meal.base_servings ?? meal.recommended_servings ?? 1 }, entry.servings);
+      }
+    } catch (err) {
+      console.warn("Inventory adjust on add failed", err);
+    }
 
     if (!token) return { ok: true, saved: entry };
 
@@ -278,8 +410,7 @@ export function PlanProvider({ children }) {
       }
 
       const saved = await res.json();
-      // saved is expected to include at least id (mealplan row) and recipeId and created_at/date/mealType
-      // Merge server returned row into local entry (match by clientId)
+
       setPlan((prev) => {
         const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
         const idx = arr.findIndex((it) => it.clientId === entry.clientId);
@@ -293,7 +424,6 @@ export function PlanProvider({ children }) {
             created_at: saved.created_at ?? saved.createdAt ?? arr[idx].created_at
           };
         } else {
-          // push mapped saved
           const mapped = {
             serverId: saved.id ?? saved.serverId ?? null,
             recipeId: saved.recipeId ?? saved.recipe_id ?? saved.recipeId ?? null,
@@ -324,7 +454,56 @@ export function PlanProvider({ children }) {
     }
   }
 
-  // removeMeal supports multiple signatures (see user's code expectations)
+  // updateServings: adjust a plan item servings and inventory accordingly
+  async function updateServings(key, indexOrMatcher, newServings) {
+    // locate the item robustly
+    setPlan((prev) => {
+      const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
+
+      if (idx < 0) {
+        // indexOrMatcher may be object with clientId/serverId/recipeId
+        if (typeof indexOrMatcher === "object" && indexOrMatcher !== null) {
+          const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
+          const needle = indexOrMatcher.clientId ?? indexOrMatcher.serverId ?? indexOrMatcher.recipeId ?? null;
+          if (needle != null) idx = arr.findIndex(x => getId(x) === needle);
+        }
+      }
+
+      if (idx < 0 || idx >= arr.length) {
+        // nothing to update
+        return prev;
+      }
+
+      const oldItem = arr[idx];
+      const oldServ = Number(oldItem.servings ?? 1);
+      const nextServ = Math.max(1, Math.round(Number(newServings) || 1));
+      const delta = nextServ - oldServ;
+
+      if (delta === 0) return prev;
+
+      arr[idx] = { ...oldItem, servings: nextServ };
+      const next = { ...prev, [key]: arr };
+      saveLocalPlan(next);
+
+      // apply inventory adjustments asynchronously (do not block local update)
+      (async () => {
+        try {
+          const prefs = readPrefsLocal();
+          if (prefs.user_inventory && oldItem.recipeId) {
+            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
+          }
+        } catch (err) {
+          console.warn("updateServings inventory adjustment failed", err);
+        }
+      })();
+
+      return next;
+    });
+
+    return { ok: true };
+  }
+
   async function removeMeal(...args) {
     // normalize args
     let key, index, serverId = null;
@@ -347,17 +526,29 @@ export function PlanProvider({ children }) {
       return { ok: false, error: "invalid args" };
     }
 
-    // remove locally
+    // obtain the item to be removed for inventory refund
+    let removedItem = null;
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
       if (index < 0 || index >= arr.length) return prev;
+      removedItem = arr[index];
       arr.splice(index, 1);
       const next = { ...prev, [key]: arr };
       saveLocalPlan(next);
       return next;
     });
 
-    // remove on server if logged in and serverId known
+    // refund inventory if needed
+    try {
+      const prefs = readPrefsLocal();
+      if (prefs.user_inventory && removedItem && removedItem.recipeId) {
+        // To refund inventory, pass negative servingsDelta so adjustInventoryForRecipe produces positive deltas
+        await adjustInventoryForRecipe({ id: removedItem.recipeId, base_servings: removedItem.base_servings ?? removedItem.recommended_servings ?? 1 }, -Number(removedItem.servings ?? 0));
+      }
+    } catch (err) {
+      console.warn("Failed to refund inventory when removing item", err);
+    }
+
     if (token && serverId) {
       try {
         const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${serverId}`, {
@@ -381,13 +572,23 @@ export function PlanProvider({ children }) {
     return { ok: true };
   }
 
+  // inventory accessors
+  const getInventory = useCallback(() => (typeof inventory === "object" ? inventory : {}), [inventory]);
+  const setInventoryLocal = useCallback((obj) => {
+    setInventory(obj || {});
+    saveLocalInventory(obj || {});
+  }, []);
+
   return (
     <PlanContext.Provider value={{
       plan,
       addMeal,
       removeMeal,
+      updateServings,
+      adjustInventoryForRecipe,
+      getInventory,
+      setInventoryLocal,
       loading,
-      // expose syncRange so WeekPlanner (or other UI) can explicitly refresh the visible week
       syncRange
     }}>
       {children}

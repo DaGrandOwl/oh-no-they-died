@@ -1,26 +1,27 @@
 import { useState } from "react";
-import { DndProvider, useDrag } from "react-dnd";
+import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import WeekPlanner from "../components/WeekPlanner"; // must accept onDrop, highlightedRecipe, onSlotClick, onRemove
+import WeekPlanner from "../components/WeekPlanner";
 import { usePreferences } from "../contexts/PrefContext";
 import { usePlan } from "../contexts/PlanContext";
 import { useAuth } from "../contexts/AuthContext";
+import MealCard from "../components/MealCard";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function confirmToast(message, onConfirm, options = {}) {
   toast.warn(
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <span>{message}</span>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: "flex", gap: 8 }}>
         <button
           onClick={() => { toast.dismiss(); onConfirm(); }}
-          style={{ padding: '2px 6px', background: '#4ade80', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          style={{ padding: "2px 6px", background: "#4ade80", border: "none", borderRadius: 4, cursor: "pointer" }}>
           Yes
         </button>
         <button
           onClick={() => toast.dismiss()}
-          style={{ padding: '2px 6px', background: '#f87171', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          style={{ padding: "2px 6px", background: "#f87171", border: "none", borderRadius: 4, cursor: "pointer" }}>
           Cancel
         </button>
       </div>
@@ -38,95 +39,12 @@ function nextDateForWeekday(weekday) {
   return next.toISOString().slice(0,10);
 }
 
-function RecipeResultCard({ recipe, onStartHighlight, onClearHighlight }) {
-  const [, dragRef] = useDrag(() => ({
-    type: "RECIPE",
-    item: () => {
-      onStartHighlight(recipe);
-      return { recipe };
-    },
-    end: () => {
-      onClearHighlight();
-    },
-    collect: () => ({})
-  }));
-
-  return (
-    <div
-      ref={dragRef}
-      style={{
-        borderRadius: 8,
-        border: "1px solid rgba(148,163,184,0.12)",
-        padding: 12,
-        background: "linear-gradient(180deg, rgba(15,23,42,0.6), rgba(17,24,39,0.6))",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          <div style={{ fontWeight: 700 }}>{recipe.name}</div>
-          <div style={{ fontSize: 12, color: "#9ca3af" }}>{recipe.cuisine || recipe.mealType || ""}</div>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 700 }}>{recipe.calories ?? "-" } cal</div>
-          <div style={{ fontSize: 12, color: "#9ca3af" }}>{recipe.servings ?? 1} serv</div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, fontSize: 13, color: "#cbd5e1" }}>
-        <div>P: {recipe.protein ?? "-" }g</div>
-        <div>C: {recipe.carbs ?? "-" }g</div>
-        <div>F: {recipe.fat ?? "-" }g</div>
-        <div>Cost: ${recipe.appx_cost ?? "-"}</div>
-      </div>
-
-      {typeof recipe.match_pct === "number" && (
-        <div style={{ fontSize: 12, color: "#a78bfa" }}>
-          Inventory match: {Math.round(recipe.match_pct)}%
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button
-          onClick={() => onStartHighlight(recipe)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: 6,
-            border: "none",
-            background: "linear-gradient(90deg,#8b5cf6,#06b6d4)",
-            color: "white",
-            cursor: "pointer"
-          }}
-        >
-          Add
-        </button>
-
-        <a
-          href={`/recipe/${recipe.id}`}
-          style={{
-            padding: "6px 10px",
-            borderRadius: 6,
-            textDecoration: "none",
-            color: "#a78bfa",
-            border: "1px solid rgba(167,139,250,0.14)",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-        >
-          View
-        </a>
-      </div>
-    </div>
-  );
-}
-
 export default function Recommendations() {
   const { prefs } = usePreferences();
   const { addMeal, plan, removeMeal } = usePlan();
   const { token } = useAuth();
+
+  // Filters: no servings filter here
   const [filters, setFilters] = useState({
     cuisine: "",
     mealType: "",
@@ -135,12 +53,24 @@ export default function Recommendations() {
     minCarbs: "",
     minProtein: "",
     minFat: "",
-    maxCost: "",
-    inventoryMatch: false,
-    servings: ""
+    maxCost: 3,           // default to highest tier ($$$)
+    inventoryMatch: false
   });
+
+  const initialFilters = {
+    cuisine: "",
+    mealType: "",
+    dietType: "",
+    maxCalories: "",
+    minCarbs: "",
+    minProtein: "",
+    minFat: "",
+    maxCost: 3,
+    inventoryMatch: false
+  };
+
   const [results, setResults] = useState([]);
-  const [highlightedRecipe, setHighlightedRecipe] = useState(null); // recipe object when Add pressed or drag begun
+  const [highlightedRecipe, setHighlightedRecipe] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleFilterChange = (key, value) => {
@@ -150,33 +80,71 @@ export default function Recommendations() {
   async function searchRecipes() {
     try {
       setLoading(true);
-      // build query params only for non-empty filters
+
       const params = {};
-      Object.entries(filters).forEach(([k,v]) => {
-        if (v !== "" && v !== false && v !== null && v !== undefined) params[k] = v;
-      });
+      if (filters.cuisine && String(filters.cuisine).trim() !== "") params.cuisine = filters.cuisine;
+      if (filters.mealType && String(filters.mealType).trim() !== "") params.mealType = filters.mealType;
+      if (filters.dietType && String(filters.dietType).trim() !== "") params.dietType = filters.dietType;
+      if (filters.maxCalories !== "" && filters.maxCalories != null) params.calories = filters.maxCalories;
+      if (filters.minCarbs !== "" && filters.minCarbs != null) params.carbs = filters.minCarbs;
+      if (filters.minProtein !== "" && filters.minProtein != null) params.protein = filters.minProtein;
+      if (filters.minFat !== "" && filters.minFat != null) params.fat = filters.minFat;
+
+      // maxCost must be 1..3 to match appx_cost DB column semantics
+      const mc = Number(filters.maxCost);
+      if ([1,2,3].includes(mc)) params.maxCost = mc;
+
+      if (filters.inventoryMatch === true) params.inventoryMatch = true;
+
       const qs = new URLSearchParams(params).toString();
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/recommendations?${qs}`, {
+      const url = `${process.env.REACT_APP_API_URL}/api/recommendations${qs ? ("?" + qs) : ""}`;
+
+      const res = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
+
+      // read text once and parse JSON defensively (prevents multiple body reads / HTML responses causing exceptions)
+      const text = await res.text();
+
       if (!res.ok) {
+        // backend returned an error page or JSON error
+        console.error("Recommendations failed:", text);
         toast.error("Failed to get recommendations");
-        setLoading(false);
+        setResults([]);
         return;
       }
-      const data = await res.json();
-      setResults(Array.isArray(data) ? data : []);
+
+      let data;
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch (err) {
+        console.error("Non-JSON recommendations response:", text);
+        toast.error("Server returned invalid data");
+        setResults([]);
+        return;
+      }
+
+      let normalized = [];
+      if (Array.isArray(data)) normalized = data;
+      else if (data && typeof data === "object") normalized = [data];
+      else normalized = [];
+
+      // limit to 5 as UI expects
+      normalized = normalized.slice(0, 5);
+
+      setResults(normalized);
     } catch (err) {
       console.error(err);
       toast.error("Search failed");
+      setResults([]);
     } finally {
       setLoading(false);
     }
   }
 
-  // Called by Recipe card drag begin or Add button
-  function startHighlight(recipe) {
-    setHighlightedRecipe(recipe);
+  function startHighlight(recipeWithServings) {
+    // recipeWithServings should include the current servings as selected in the MealCard
+    setHighlightedRecipe(recipeWithServings);
     toast.info("Click a slot in the planner to add this meal (or drop onto a slot).", { autoClose: 3000 });
   }
 
@@ -184,7 +152,6 @@ export default function Recommendations() {
     setHighlightedRecipe(null);
   }
 
-  // Called by planner when a slot is clicked (mobile fallback)
   async function handleSlotClick(date, mealTime) {
     if (!highlightedRecipe) {
       toast.info("Select a recipe first (Add or drag).");
@@ -194,16 +161,13 @@ export default function Recommendations() {
     clearHighlight();
   }
 
-  // Called when a recipe is dropped on planner slot (drag)
   async function handleDrop(recipe, date, mealTime) {
     await handleAddRecipeToPlan(recipe, date, mealTime);
     clearHighlight();
   }
 
-  // Centralized add flow (allergen check -> confirm -> add)
   async function handleAddRecipeToPlan(recipe, date, mealTime) {
     try {
-      // allergen check (use user's prefs)
       function toArray(val) {
         if (!val) return [];
         if (Array.isArray(val)) {
@@ -217,14 +181,17 @@ export default function Recommendations() {
       const userAllergens = toArray(prefs?.allergens).map(a => a.toLowerCase());
       const recipeAllergens = toArray(recipe.allergens).map(a => a.toLowerCase());
       const hasBad = recipeAllergens.some(a => userAllergens.includes(a));
+
+      // honor servings included on recipe (from MealCard drag or highlighted item)
+      const servingsToUse = Number(recipe.servings ?? recipe.recommended_servings ?? 1);
+
       const doAdd = async () => {
-        const res = await addMeal(recipe, date, mealTime, recipe.servings ?? 1);
+        const res = await addMeal(recipe, date, mealTime, servingsToUse);
         if (res.ok) toast.success("Added to plan");
         else toast.error("Failed to add to plan");
       };
 
       if (hasBad) {
-        // show confirm toast with Yes callback
         confirmToast(
           "This recipe contains allergens you marked. Add anyway?",
           async () => doAdd()
@@ -238,6 +205,11 @@ export default function Recommendations() {
     }
   }
 
+  const clearAll = () => {
+    setFilters({ ...initialFilters });
+    setResults([]);
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 16, padding: 16 }}>
@@ -248,14 +220,38 @@ export default function Recommendations() {
           {/* Filters */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 8, marginBottom: 12 }}>
             <input placeholder="Cuisine" value={filters.cuisine} onChange={e => handleFilterChange("cuisine", e.target.value)} />
-            <input placeholder="Meal type (Breakfast/Lunch/...)" value={filters.mealType} onChange={e => handleFilterChange("mealType", e.target.value)} />
+
+            {/* mealType dropdown */}
+            <select value={filters.mealType} onChange={e => handleFilterChange("mealType", e.target.value)}>
+              <option value="">Any meal type</option>
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch">Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Snacks">Snacks</option>
+            </select>
+
             <input placeholder="Diet type (keto/vegan...)" value={filters.dietType} onChange={e => handleFilterChange("dietType", e.target.value)} />
             <input type="number" placeholder="Max Calories" value={filters.maxCalories} onChange={e => handleFilterChange("maxCalories", e.target.value)} />
             <input type="number" placeholder="Min Carbs (g)" value={filters.minCarbs} onChange={e => handleFilterChange("minCarbs", e.target.value)} />
             <input type="number" placeholder="Min Protein (g)" value={filters.minProtein} onChange={e => handleFilterChange("minProtein", e.target.value)} />
             <input type="number" placeholder="Min Fat (g)" value={filters.minFat} onChange={e => handleFilterChange("minFat", e.target.value)} />
-            <input type="number" placeholder="Max Cost ($)" value={filters.maxCost} onChange={e => handleFilterChange("maxCost", e.target.value)} />
-            <input type="number" placeholder="Servings" value={filters.servings} onChange={e => handleFilterChange("servings", e.target.value)} />
+
+            {/* Max cost: show as $, $$, $$$ (maps to 1,2,3) */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
+                Max cost:
+              </label>
+              <select
+                value={filters.maxCost ?? 3}
+                onChange={(e) => handleFilterChange("maxCost", Number(e.target.value))}
+                style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 14 }}
+              >
+                <option value={3}>$$$</option>
+                <option value={2}>$$</option>
+                <option value={1}>$</option>
+              </select>
+            </div>
+
             <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <input type="checkbox" checked={filters.inventoryMatch} onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} />
               Match inventory
@@ -266,9 +262,11 @@ export default function Recommendations() {
             <button onClick={searchRecipes} style={{ padding: "8px 12px", borderRadius: 6, background: "#06b6d4", color: "#fff", border: "none" }}>
               {loading ? "Searching..." : "Search"}
             </button>
-            <button onClick={() => { setFilters({}); setResults([]); }} style={{ padding: "8px 12px", borderRadius: 6 }}>
+
+            <button onClick={clearAll} style={{ padding: "8px 12px", borderRadius: 6 }}>
               Clear
             </button>
+
             {highlightedRecipe && (
               <button onClick={() => clearHighlight()} style={{ padding: "8px 12px", borderRadius: 6 }}>
                 Cancel Add
@@ -276,17 +274,23 @@ export default function Recommendations() {
             )}
           </div>
 
-          {/* Results grid */}
+          {/* Results grid: use MealCard for recommendations */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
             {results.length === 0 ? (
               <div style={{ gridColumn: "1/-1", color: "#9ca3af" }}>No results. Try different filters.</div>
             ) : results.map(r => (
-              <RecipeResultCard
-                key={r.id}
-                recipe={r}
-                onStartHighlight={startHighlight}
-                onClearHighlight={clearHighlight}
-              />
+              <div key={r.id}>
+                <MealCard
+                  recipe={r}
+                  compact={false}
+                  hideImage={false}
+                  onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)}
+                  onClearHighlight={() => clearHighlight()}
+                />
+                {typeof r.match_pct === "number" && (
+                  <div style={{ fontSize: 12, color: "#a78bfa", marginTop: 6 }}>Inventory match: {Math.round(r.match_pct)}%</div>
+                )}
+              </div>
             ))}
           </div>
         </main>

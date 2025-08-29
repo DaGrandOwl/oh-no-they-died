@@ -80,7 +80,7 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
         map.set(id, {
           ...m,
           servings: m.servings ?? 1,
-          __sourceIndices: [rawIndex],      // <- store the indices in the raw array
+          __sourceIndices: [rawIndex],
         });
       }
     });
@@ -111,15 +111,16 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
           return (
             <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
               <MealCard
-                item={meal}          // pass meal as item
+                item={meal}
                 compact={true}
+                hideImage={true}
                 isoDate={isoDate}
                 mealTime={mealTime}
                 onAddToPlan={onDropMeal}
               />
               <button
                 onClick={() => {
-                  const key = `${isoDate}-${String(mealTime).toLowerCase()}`;
+                  const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
                   const rawIndex =
                     meal.__sourceIndices?.[0] ??
                     meals.findIndex(x => {
@@ -128,7 +129,7 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
                     });
 
                   onRemove && onRemove({
-                    key,
+                    key: keyStr,
                     index: rawIndex,
                     serverId: meal.serverId ?? null,
                     clientId: meal.clientId ?? null,
@@ -136,17 +137,17 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
                   });
                 }}
                 style={{
-                background: "rgba(239,68,68,0.12)",
-                border: "none",
-                borderRadius: "50%",
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "#ef4444",
-                marginLeft: 8}}
+                  background: "rgba(239,68,68,0.12)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#ef4444",
+                  marginLeft: 8}}
                 title="Remove"
               >
                 <X style={{ width: 14, height: 14 }} />
@@ -165,16 +166,13 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
   const { plan, addMeal, removeMeal, syncRange } = usePlan();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pending, setPending] = useState(null); // { recipe, isoDate, mealTime }
+  const [pending, setPending] = useState(null);
 
-  // Confirm-and-add (used when allergen conflict)
   const confirmAndAdd = useCallback(async () => {
     if (!pending) { setConfirmOpen(false); return; }
     const { recipe, isoDate, mealTime } = pending;
     setConfirmOpen(false);
     setPending(null);
-
-    // Use move/merge logic (same as drop handler)
     await handleDropMeal(recipe, isoDate, mealTime);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, addMeal, removeMeal, plan]);
@@ -187,15 +185,13 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
   const handleDropMeal = useCallback(async (recipe, isoDate, mealTime) => {
     if (!recipe) return;
 
-    const safeMealTime = (mealTime || "unknown").toString().toLowerCase();
+    const safeMealTime = (mealTime || "unknown").toLowerCase();
     const targetKey = `${isoDate}-${safeMealTime}`;
 
-    // normalize functions
-    const getRecipeId = (r) => (r.recipeId ?? r.id ?? r.recipe_id ?? null);
+    const getRecipeId = (r) => r.recipeId ?? r.id ?? r.recipe_id ?? null;
     const droppedRecipeId = getRecipeId(recipe);
     const droppedServings = Number(recipe.servings ?? 1);
 
-    // allergen check
     const userAllergens = Array.isArray(prefs?.allergens) ? prefs.allergens.map(a => a.toLowerCase()) : [];
     const recipeAllergens = Array.isArray(recipe.allergens) ? recipe.allergens.map(a => a.toLowerCase()) : [];
     const conflict = recipeAllergens.some(a => userAllergens.includes(a));
@@ -205,16 +201,24 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
       return;
     }
 
-    // find sourceKey if the dragged item came from planner (it may include date & mealType)
-    const sourceDate = recipe.date || recipe.scheduled_date || recipe.scheduledDate || null;
-    const sourceMealType = (recipe.mealType || recipe.meal_type || null);
-    const sourceKey = (sourceDate && sourceMealType) ? `${sourceDate}-${String(sourceMealType).toLowerCase()}` : null;
-
-    // find existing in target
+    // check if already exists in target
     const targetArr = Array.isArray(plan[targetKey]) ? [...plan[targetKey]] : [];
     const existingIdx = targetArr.findIndex(it => String(getRecipeId(it)) === String(droppedRecipeId));
 
-    // if existing found -> we'll merge servings
+    const sourceDate = recipe.date || recipe.scheduled_date || recipe.scheduledDate || null;
+    const sourceMealType = recipe.mealType || recipe.meal_type || null;
+    const sourceKey = (sourceDate && sourceMealType) ? `${sourceDate}-${String(sourceMealType).toLowerCase()}` : null;
+
+    const srcArr = sourceKey && Array.isArray(plan[sourceKey]) ? [...plan[sourceKey]] : null;
+    let sourceIndex = -1;
+    if (srcArr && sourceKey) {
+      sourceIndex = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
+    }
+
+    // If the dragged item originated from the planner itself and nothing changed — ignore
+    if (sourceKey && sourceKey === targetKey && sourceIndex !== -1 && existingIdx !== -1 && sourceIndex === existingIdx) return;
+
+    // if existing found -> merge servings
     if (existingIdx !== -1) {
       const existing = targetArr[existingIdx];
       const combinedServings = Number(existing.servings ?? 0) + droppedServings;
@@ -223,7 +227,7 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
       try {
         await removeMeal({ key: targetKey, index: existingIdx, serverId: existing.serverId ?? null });
       } catch (err) {
-        console.warn("Failed to remove existing during merge", err);
+        // best-effort
       }
 
       // if the drop originated from a different cell, remove original too
@@ -235,51 +239,45 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
           try {
             await removeMeal({ key: sourceKey, index: matchIdx, serverId: sourceArr[matchIdx].serverId ?? null });
           } catch (err) {
-            console.warn("Failed to remove original during merge", err);
+            // ignore
           }
         }
       }
 
-      // finally add combined entry (optimistic + server)
+      // add combined entry (PlanContext will manage inventory based on user prefs)
       const res = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, combinedServings);
       if (res?.ok) toast.success("Merged servings and saved to plan");
       else toast.error("Failed to merge servings");
       return;
     }
 
-    // no existing in target:
-    // if the item came from another cell, remove original first then add to target (this avoids ghost)
-    if (sourceKey && sourceKey !== targetKey) {
-      // try to remove original matching clientId or serverId
-      const srcArr = Array.isArray(plan[sourceKey]) ? [...plan[sourceKey]] : [];
+    // no existing in target, just move (if from other cell remove original first)
+    if (sourceKey && sourceKey !== targetKey && srcArr) {
       const matchIdx = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
       if (matchIdx !== -1) {
         try {
           await removeMeal({ key: sourceKey, index: matchIdx, serverId: srcArr[matchIdx].serverId ?? null });
         } catch (err) {
-          console.warn("Failed to remove original when moving", err);
+          // ignore
         }
       }
     }
 
-    // simply add dropped recipe to target (servings preserved)
+    // add dropped recipe to target (PlanContext handles inventory if enabled)
     const addRes = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, droppedServings);
     if (addRes?.ok) toast.success("Added to plan");
     else toast.error("Failed to add to plan");
 
   }, [prefs, plan, addMeal, removeMeal]);
 
-  // expose an explicit refresh method from PlanContext when UI wants to refresh the week
   const refreshWeek = useCallback(() => {
-    // compute current week range from weekDates and call syncRange if available
     if (!weekDates || !weekDates.length) return;
     const dates = weekDates.map(w => w.isoDate).filter(Boolean);
     if (dates.length && typeof syncRange === "function") {
       const sorted = [...dates].sort();
       syncRange(sorted[0], sorted[sorted.length - 1]).catch((e) => console.warn("syncRange failed", e));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekDates]);
+  }, [weekDates, syncRange]);
 
   const handleRemove = useCallback(async ({ key, index, serverId, clientId, recipeId }) => {
     const arr = Array.isArray(plan[key]) ? plan[key] : [];
@@ -287,18 +285,15 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
     if (idx < 0 || idx >= arr.length) {
       const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
       const needle = clientId ?? serverId ?? recipeId ?? null;
-      if (needle != null) {
-        idx = arr.findIndex(x => getId(x) === needle);
-      }
+      if (needle != null) idx = arr.findIndex(x => getId(x) === needle);
     }
-
     if (idx < 0) return;
     try {
+      // removeMeal will refund inventory if user has inventory tracking turned on (handled in PlanContext)
       await removeMeal({ key, index: idx, serverId: arr[idx]?.serverId ?? serverId ?? null });
       toast.info("Removed from plan");
     } catch (err) {
       toast.error("Failed to remove from server");
-      console.warn(err);
     }
   }, [plan, removeMeal]);
 
@@ -331,7 +326,6 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
             ))}
           </tr>
         </thead>
-
         <tbody>
           {mealTimes.map((mealTime) => (
             <tr key={mealTime}>
@@ -343,7 +337,7 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
                 padding: 8
               }}>{mealTime}</td>
 
-              {weekDates.map(({ weekdayKey, isoDate }, idx) => {
+              {weekDates.map(({ isoDate }, idx) => {
                 const normalizedMealTime = mealTime.toLowerCase();
                 const cellKey = `${isoDate}-${normalizedMealTime}`;
                 const meals = Array.isArray(plan[cellKey]) ? plan[cellKey] : [];
