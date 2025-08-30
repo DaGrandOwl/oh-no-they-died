@@ -21,8 +21,34 @@ function buildWeekDates(dateForWeekday) {
   });
 }
 
-function ConfirmModal({ open, title, message, onYes, onNo }) {
+function ConfirmModal({ open, title, message, onYes, onNo, darkTheme = false }) {
   if (!open) return null;
+  
+  const modalStyle = darkTheme ? {
+    background: 'rgba(30, 41, 59, 0.95)',
+    color: '#f8fafc',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+  } : {
+    background: "#fff",
+    color: '#000',
+    boxShadow: "0 10px 30px rgba(2,6,23,0.35)"
+  };
+
+  const cancelStyle = darkTheme ? {
+    padding: "8px 12px", 
+    background: "rgba(148, 163, 184, 0.2)", 
+    borderRadius: 8, 
+    border: "1px solid rgba(148, 163, 184, 0.3)", 
+    cursor: "pointer",
+    color: '#e2e8f0'
+  } : {
+    padding: "8px 12px", 
+    background: "#f3f4f6", 
+    borderRadius: 8, 
+    border: "none", 
+    cursor: "pointer"
+  };
+
   return (
     <div style={{
       position: "fixed",
@@ -33,16 +59,19 @@ function ConfirmModal({ open, title, message, onYes, onNo }) {
     }}>
       <div style={{
         width: 360, maxWidth: "94%", borderRadius: 12, padding: 18,
-        background: "#fff", boxShadow: "0 10px 30px rgba(2,6,23,0.35)"
+        ...modalStyle
       }}>
         <h3 style={{ margin: 0, marginBottom: 8 }}>{title}</h3>
-        <p style={{ marginTop: 0, marginBottom: 16, color: "#374151" }}>{message}</p>
+        <p style={{ marginTop: 0, marginBottom: 16, color: darkTheme ? "#94a3b8" : "#374151" }}>{message}</p>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button onClick={onNo} style={{
-            padding: "8px 12px", background: "#f3f4f6", borderRadius: 8, border: "none", cursor: "pointer"
-          }}>Cancel</button>
+          <button onClick={onNo} style={cancelStyle}>Cancel</button>
           <button onClick={onYes} style={{
-            padding: "8px 12px", background: "linear-gradient(90deg,#8b5cf6,#06b6d4)", color: "#fff", borderRadius: 8, border: "none", cursor: "pointer"
+            padding: "8px 12px", 
+            background: "linear-gradient(90deg,#8b5cf6,#06b6d4)", 
+            color: "#fff", 
+            borderRadius: 8, 
+            border: "none", 
+            cursor: "pointer"
           }}>Add Anyway</button>
         </div>
       </div>
@@ -50,7 +79,19 @@ function ConfirmModal({ open, title, message, onYes, onNo }) {
   );
 }
 
-function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, onRemove, highlightedRecipe }) {
+function PlannerCell({ 
+  isoDate, 
+  mealTime, 
+  meals = [], 
+  onDropMeal, 
+  onSlotClick, 
+  onRemove, 
+  highlightedRecipe,
+  // NEW: Accept props for MealCard styling
+  plannerMode = false,
+  minimized = false,
+  darkTheme = false
+}) {
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
     drop: (item) => {
@@ -87,22 +128,63 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
     return Array.from(map.values());
   }, [meals]);
 
+  const cellStyle = darkTheme ? {
+    minHeight: 80,
+    padding: "0.25rem",
+    border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
+    borderRadius: 4,
+    background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
+    verticalAlign: "top",
+    cursor: highlight ? "pointer" : "default"
+  } : {
+    minHeight: 80,
+    padding: "0.25rem",
+    border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
+    borderRadius: 4,
+    background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
+    verticalAlign: "top",
+    cursor: highlight ? "pointer" : "default"
+  };
+
+  const removeButtonStyle = darkTheme ? {
+    background: "rgba(239,68,68,0.2)",
+    border: "1px solid rgba(239,68,68,0.3)",
+    borderRadius: "50%",
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#f87171",
+    marginLeft: 8
+  } : {
+    background: "rgba(239,68,68,0.12)",
+    border: "none",
+    borderRadius: "50%",
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#ef4444",
+    marginLeft: 8
+  };
+
   return (
     <td
       ref={dropRef}
-      style={{
-        minHeight: 80,
-        padding: "0.25rem",
-        border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
-        borderRadius: 4,
-        background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
-        verticalAlign: "top",
-        cursor: highlight ? "pointer" : "default"
-      }}
+      style={cellStyle}
       onClick={() => highlight && onSlotClick && onSlotClick(isoDate, mealTime)}
     >
       {(!mergedMeals || mergedMeals.length === 0) ? (
-        <div style={{ textAlign: "center", color: highlight ? "#8b5cf6" : "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+        <div style={{ 
+          textAlign: "center", 
+          color: highlight ? "#8b5cf6" : (darkTheme ? "#94a3b8" : "#94a3b8"), 
+          fontSize: 12, 
+          marginBottom: 6 
+        }}>
           + Add Meal
         </div>
       ) : (
@@ -117,6 +199,10 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
                 isoDate={isoDate}
                 mealTime={mealTime}
                 onAddToPlan={onDropMeal}
+                // NEW: Pass the planner-specific props
+                plannerMode={plannerMode}
+                minimized={minimized}
+                darkTheme={darkTheme}
               />
               <button
                 onClick={() => {
@@ -136,18 +222,7 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
                     recipeId: meal.id ?? meal.recipeId ?? null,
                   });
                 }}
-                style={{
-                  background: "rgba(239,68,68,0.12)",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 28,
-                  height: 28,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#ef4444",
-                  marginLeft: 8}}
+                style={removeButtonStyle}
                 title="Remove"
               >
                 <X style={{ width: 14, height: 14 }} />
@@ -160,7 +235,16 @@ function PlannerCell({ isoDate, mealTime, meals = [], onDropMeal, onSlotClick, o
   );
 }
 
-export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotClick, ...rest }) {
+export default function WeekPlanner({ 
+  dateForWeekday, 
+  highlightedRecipe, 
+  onSlotClick, 
+  // NEW: Accept the planner styling props
+  plannerMode = false,
+  minimized = false,
+  darkTheme = false,
+  ...rest 
+}) {
   const weekDates = useMemo(() => buildWeekDates(dateForWeekday), [dateForWeekday]);
   const { prefs } = usePreferences();
   const { plan, addMeal, removeMeal, syncRange } = usePlan();
@@ -297,30 +381,98 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
     }
   }, [plan, removeMeal]);
 
+  // NEW: Container styling based on theme
+  const containerStyle = darkTheme ? {
+    padding: 16,
+    color: '#f8fafc'
+  } : {
+    padding: 16
+  };
+
+  const headerStyle = darkTheme ? {
+    fontSize: 16, 
+    margin: 0,
+    color: '#f8fafc'
+  } : {
+    fontSize: 16, 
+    margin: 0
+  };
+
+  const refreshButtonStyle = darkTheme ? {
+    padding: "6px 10px", 
+    borderRadius: 8, 
+    border: "1px solid rgba(148, 163, 184, 0.2)", 
+    background: "rgba(30, 41, 59, 0.8)", 
+    cursor: "pointer",
+    color: '#e2e8f0'
+  } : {
+    padding: "6px 10px", 
+    borderRadius: 8, 
+    border: "none", 
+    background: "#eef2ff", 
+    cursor: "pointer"
+  };
+
+  const tableStyle = darkTheme ? {
+    width: "100%", 
+    borderCollapse: "collapse",
+    background: 'rgba(30, 41, 59, 0.3)',
+    borderRadius: '0.5rem',
+    overflow: 'hidden'
+  } : {
+    width: "100%", 
+    borderCollapse: "collapse"
+  };
+
+  const thStyle = darkTheme ? {
+    padding: 8, 
+    textAlign: "center",
+    background: 'rgba(139, 92, 246, 0.1)',
+    color: '#e2e8f0'
+  } : {
+    padding: 8, 
+    textAlign: "center"
+  };
+
+  const mealTimeStyle = darkTheme ? {
+    fontWeight: 600,
+    color: "#a78bfa",
+    textAlign: "center",
+    background: "rgba(139,92,246,0.1)",
+    padding: 8
+  } : {
+    fontWeight: 600,
+    color: "#7c3aed",
+    textAlign: "center",
+    background: "rgba(139,92,246,0.04)",
+    padding: 8
+  };
+
   return (
-    <div style={{ padding: 16 }}>
+    <div style={containerStyle}>
       <ConfirmModal
         open={confirmOpen}
         title="Allergen Warning"
         message="This recipe contains one or more allergens you marked. Are you sure you want to add it?"
         onYes={confirmAndAdd}
         onNo={cancelPending}
+        darkTheme={darkTheme}
       />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Weekly Planner</h2>
+        <h2 style={headerStyle}>Weekly Planner</h2>
         <div>
-          <button onClick={refreshWeek} style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#eef2ff", cursor: "pointer" }}>Refresh</button>
+          <button onClick={refreshWeek} style={refreshButtonStyle}>Refresh</button>
         </div>
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table style={tableStyle}>
         <thead>
           <tr>
-            <th style={{ textAlign: "left", width: 120 }}>Meal Time</th>
+            <th style={{ textAlign: "left", width: 120, ...thStyle }}>Meal Time</th>
             {weekDates.map(({ day, displayDate }, idx) => (
-              <th key={`${day}-${idx}`} style={{ padding: 8, textAlign: "center" }}>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>{displayDate}</div>
+              <th key={`${day}-${idx}`} style={thStyle}>
+                <div style={{ fontSize: 12, color: darkTheme ? "#94a3b8" : "#6b7280" }}>{displayDate}</div>
                 <div style={{ fontWeight: 600 }}>{day}</div>
               </th>
             ))}
@@ -329,13 +481,7 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
         <tbody>
           {mealTimes.map((mealTime) => (
             <tr key={mealTime}>
-              <td style={{
-                fontWeight: 600,
-                color: "#7c3aed",
-                textAlign: "center",
-                background: "rgba(139,92,246,0.04)",
-                padding: 8
-              }}>{mealTime}</td>
+              <td style={mealTimeStyle}>{mealTime}</td>
 
               {weekDates.map(({ isoDate }, idx) => {
                 const normalizedMealTime = mealTime.toLowerCase();
@@ -352,6 +498,10 @@ export default function WeekPlanner({ dateForWeekday, highlightedRecipe, onSlotC
                     onRemove={handleRemove}
                     highlightedRecipe={highlightedRecipe}
                     onSlotClick={onSlotClick}
+                    // NEW: Pass the planner-specific props down
+                    plannerMode={plannerMode}
+                    minimized={minimized}
+                    darkTheme={darkTheme}
                   />
                 );
               })}

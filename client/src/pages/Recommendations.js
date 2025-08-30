@@ -210,106 +210,378 @@ export default function Recommendations() {
     setResults([]);
   };
 
+  // Styles matching the reference page
+  const cardStyle = {
+    background: 'rgba(30, 41, 59, 0.6)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '1rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)',
+    padding: '1.5rem',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    marginBottom: '1.5rem'
+  };
+
+  const inputStyle = {
+    padding: '0.75rem 1rem',
+    background: 'rgba(30, 41, 59, 0.8)',
+    border: '1px solid rgba(148, 163, 184, 0.2)',
+    borderRadius: '0.5rem',
+    color: '#f8fafc',
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'all 0.2s',
+  };
+
+  const selectStyle = {
+    ...inputStyle,
+    cursor: 'pointer',
+  };
+
+  const buttonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.75rem 1rem',
+    borderRadius: '0.5rem',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+  };
+
+  const buttonPrimary = {
+    ...buttonStyle,
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    color: 'white'
+  };
+
+  const buttonSecondary = {
+    ...buttonStyle,
+    background: 'transparent',
+    color: '#94a3b8',
+    border: '1px solid rgba(148, 163, 184, 0.2)'
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 16, padding: 16 }}>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        color: '#f8fafc',
+        padding: '2rem'
+      }}>
         <ToastContainer position="top-right" />
-        <main style={{ paddingRight: 12 }}>
-          <h2>Recipe Recommendations</h2>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          
+          {/* Page Header */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h1 style={{ 
+                  fontSize: '2.5rem', 
+                  fontWeight: 'bold', 
+                  margin: '0 0 0.5rem 0',
+                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent'
+                }}>
+                  Recipe Recommendations
+                </h1>
+                <p style={{ 
+                  fontSize: '1.125rem', 
+                  color: '#94a3b8', 
+                  margin: '0',
+                  fontWeight: 'normal'
+                }}>
+                  Discover and plan your next meal
+                </p>
+              </div>
+              {highlightedRecipe && (
+                <button 
+                  onClick={() => clearHighlight()} 
+                  style={{
+                    ...buttonSecondary,
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#f87171',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  Cancel Selection
+                </button>
+              )}
+            </div>
+          </div>
 
-          {/* Filters */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 8, marginBottom: 12 }}>
-            <input placeholder="Cuisine" value={filters.cuisine} onChange={e => handleFilterChange("cuisine", e.target.value)} />
+          {/* Search Filters */}
+          <div style={cardStyle}>
+            <h3 style={{ 
+              fontSize: '1.25rem', 
+              fontWeight: '600', 
+              margin: '0 0 1.5rem 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span style={{ 
+                background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                borderRadius: '0.5rem',
+                padding: '0.5rem',
+                fontSize: '1rem'
+              }}>
+                🔍
+              </span>
+              Search Filters
+            </h3>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: '1rem', 
+              marginBottom: '1.5rem' 
+            }}>
+              <input 
+                placeholder="Cuisine" 
+                value={filters.cuisine} 
+                onChange={e => handleFilterChange("cuisine", e.target.value)} 
+                style={inputStyle}
+              />
 
-            {/* mealType dropdown */}
-            <select value={filters.mealType} onChange={e => handleFilterChange("mealType", e.target.value)}>
-              <option value="">Any meal type</option>
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch">Lunch</option>
-              <option value="Dinner">Dinner</option>
-              <option value="Snacks">Snacks</option>
-            </select>
-
-            <input placeholder="Diet type (keto/vegan...)" value={filters.dietType} onChange={e => handleFilterChange("dietType", e.target.value)} />
-            <input type="number" placeholder="Max Calories" value={filters.maxCalories} onChange={e => handleFilterChange("maxCalories", e.target.value)} />
-            <input type="number" placeholder="Min Carbs (g)" value={filters.minCarbs} onChange={e => handleFilterChange("minCarbs", e.target.value)} />
-            <input type="number" placeholder="Min Protein (g)" value={filters.minProtein} onChange={e => handleFilterChange("minProtein", e.target.value)} />
-            <input type="number" placeholder="Min Fat (g)" value={filters.minFat} onChange={e => handleFilterChange("minFat", e.target.value)} />
-
-            {/* Max cost: show as $, $$, $$$ (maps to 1,2,3) */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
-                Max cost:
-              </label>
-              <select
-                value={filters.maxCost ?? 3}
-                onChange={(e) => handleFilterChange("maxCost", Number(e.target.value))}
-                style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 14 }}
+              <select 
+                value={filters.mealType} 
+                onChange={e => handleFilterChange("mealType", e.target.value)}
+                style={selectStyle}
               >
-                <option value={3}>$$$</option>
-                <option value={2}>$$</option>
-                <option value={1}>$</option>
+                <option value="">Any meal type</option>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Snacks">Snacks</option>
               </select>
+
+              <input 
+                placeholder="Diet type (keto/vegan...)" 
+                value={filters.dietType} 
+                onChange={e => handleFilterChange("dietType", e.target.value)} 
+                style={inputStyle}
+              />
+
+              <input 
+                type="number" 
+                placeholder="Max Calories" 
+                value={filters.maxCalories} 
+                onChange={e => handleFilterChange("maxCalories", e.target.value)} 
+                style={inputStyle}
+              />
+
+              <input 
+                type="number" 
+                placeholder="Min Carbs (g)" 
+                value={filters.minCarbs} 
+                onChange={e => handleFilterChange("minCarbs", e.target.value)} 
+                style={inputStyle}
+              />
+
+              <input 
+                type="number" 
+                placeholder="Min Protein (g)" 
+                value={filters.minProtein} 
+                onChange={e => handleFilterChange("minProtein", e.target.value)} 
+                style={inputStyle}
+              />
+
+              <input 
+                type="number" 
+                placeholder="Min Fat (g)" 
+                value={filters.minFat} 
+                onChange={e => handleFilterChange("minFat", e.target.value)} 
+                style={inputStyle}
+              />
+
+              <div>
+                <label style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#94a3b8', 
+                  marginBottom: '0.5rem',
+                  display: 'block',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  Max Cost
+                </label>
+                <select
+                  value={filters.maxCost ?? 3}
+                  onChange={(e) => handleFilterChange("maxCost", Number(e.target.value))}
+                  style={selectStyle}
+                >
+                  <option value={3}>$$ (Premium)</option>
+                  <option value={2}>$ (Moderate)</option>
+                  <option value={1}>$ (Budget)</option>
+                </select>
+              </div>
             </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input type="checkbox" checked={filters.inventoryMatch} onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} />
-              Match inventory
-            </label>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <button onClick={searchRecipes} style={{ padding: "8px 12px", borderRadius: 6, background: "#06b6d4", color: "#fff", border: "none" }}>
-              {loading ? "Searching..." : "Search"}
-            </button>
-
-            <button onClick={clearAll} style={{ padding: "8px 12px", borderRadius: 6 }}>
-              Clear
-            </button>
-
-            {highlightedRecipe && (
-              <button onClick={() => clearHighlight()} style={{ padding: "8px 12px", borderRadius: 6 }}>
-                Cancel Add
-              </button>
-            )}
-          </div>
-
-          {/* Results grid: use MealCard for recommendations */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
-            {results.length === 0 ? (
-              <div style={{ gridColumn: "1/-1", color: "#9ca3af" }}>No results. Try different filters.</div>
-            ) : results.map(r => (
-              <div key={r.id}>
-                <MealCard
-                  recipe={r}
-                  compact={false}
-                  hideImage={false}
-                  onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)}
-                  onClearHighlight={() => clearHighlight()}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                color: '#e2e8f0',
+                fontSize: '0.875rem',
+                cursor: 'pointer'
+              }}>
+                <input 
+                  type="checkbox" 
+                  checked={filters.inventoryMatch} 
+                  onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} 
+                  style={{ accentColor: '#8b5cf6' }}
                 />
-                {typeof r.match_pct === "number" && (
-                  <div style={{ fontSize: 12, color: "#a78bfa", marginTop: 6 }}>Inventory match: {Math.round(r.match_pct)}%</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </main>
+                Match my inventory
+              </label>
+            </div>
 
-        {/* Side: Planner */}
-        <aside style={{ position: "relative" }}>
-          <h3>Weekly Planner</h3>
-          <WeekPlanner
-            plan={plan}
-            highlightedRecipe={highlightedRecipe}
-            onSlotClick={handleSlotClick}
-            onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
-            onRemove={({ key, index, serverId }) => removeMeal({ key, index, serverId })}
-            dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
-          />
-          <div style={{ marginTop: 12, fontSize: 13, color: "#94a3b8" }}>
-            Tip: drag a card onto planner (desktop) or press Add then click a slot (mobile).
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={searchRecipes} style={buttonPrimary}>
+                {loading ? "Searching..." : "🔍 Search Recipes"}
+              </button>
+              <button onClick={clearAll} style={buttonSecondary}>
+                🗑️ Clear Filters
+              </button>
+            </div>
           </div>
-        </aside>
+
+          {/* Main Content Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+            
+            {/* Results Section */}
+            <div style={cardStyle}>
+              <h2 style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '600', 
+                margin: '0 0 1.5rem 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span style={{ 
+                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                  borderRadius: '0.5rem',
+                  padding: '0.5rem',
+                  fontSize: '1rem'
+                }}>
+                  🍽️
+                </span>
+                Recipe Results
+                {results.length > 0 && (
+                  <span style={{ 
+                    fontSize: '0.875rem',
+                    color: '#94a3b8',
+                    fontWeight: 'normal',
+                    marginLeft: '0.5rem'
+                  }}>
+                    ({results.length} found)
+                  </span>
+                )}
+              </h2>
+
+              {results.length === 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '3rem 1rem',
+                  color: '#94a3b8',
+                  background: 'rgba(139, 92, 246, 0.05)',
+                  borderRadius: '0.75rem',
+                  border: '1px solid rgba(148, 163, 184, 0.1)'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                  <div style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    No recipes found
+                  </div>
+                  <div style={{ fontSize: '0.875rem' }}>
+                    Try adjusting your search filters or search for different criteria
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {results.map(r => (
+                    <div key={r.id}>
+                      <MealCard
+                        recipe={r}
+                        compact={false}
+                        hideImage={false}
+                        darkTheme={true}
+                        onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)}
+                        onClearHighlight={() => clearHighlight()}
+                      />
+                      {typeof r.match_pct === "number" && (
+                        <div style={{ 
+                          fontSize: '0.75rem', 
+                          color: '#a78bfa', 
+                          marginTop: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          borderRadius: '0.25rem',
+                          display: 'inline-block'
+                        }}>
+                          📦 Inventory match: {Math.round(r.match_pct)}%
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Weekly Planner Sidebar */}
+            <div style={cardStyle}>
+              <h3 style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '600', 
+                margin: '0 0 1.5rem 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span style={{ 
+                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                  borderRadius: '0.5rem',
+                  padding: '0.5rem',
+                  fontSize: '1rem'
+                }}>
+                  📅
+                </span>
+                Weekly Planner
+              </h3>
+              
+              <WeekPlanner
+                plan={plan}
+                highlightedRecipe={highlightedRecipe}
+                onSlotClick={handleSlotClick}
+                onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
+                onRemove={({ key, index, serverId }) => removeMeal({ key, index, serverId })}
+                dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
+                // NEW: Pass props for minimized planner mode
+                plannerMode={true}
+                minimized={true}
+                darkTheme={true}
+              />
+              
+              <div style={{ 
+                marginTop: '1rem', 
+                fontSize: '0.75rem', 
+                color: '#94a3b8',
+                padding: '0.75rem',
+                background: 'rgba(139, 92, 246, 0.05)',
+                borderRadius: '0.5rem',
+                border: '1px solid rgba(148, 163, 184, 0.1)'
+              }}>
+                💡 <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </DndProvider>
   );

@@ -6,12 +6,15 @@ export default function MealCard({
   item,
   compact = false,
   hideImage = false,
+  darkTheme = false,
   onAddToPlan,
   isoDate,
   mealTime,
   onStartHighlight = () => {},
   onClearHighlight = () => {},
   onServingsChange = null, // optional callback for parent to react to servings changes
+  plannerMode = false, // NEW: indicates if this is used in the planner
+  minimized = false, // NEW: starts in minimized state
 }) {
   const data = recipe || item;
 
@@ -26,6 +29,7 @@ export default function MealCard({
   }, [data && (data.servings ?? data.recommended_servings ?? data.base_servings)]);
 
   const [servings, setServings] = useState(initialServings);
+  const [isHovered, setIsHovered] = useState(false); // NEW: hover state
 
   // keep servings in sync if data changes (e.g. server merge replaced the item)
   useEffect(() => {
@@ -100,41 +104,254 @@ export default function MealCard({
     }
   };
 
-  // image area: hide if hideImage or if compact (planner cards)
-  const showImage = !hideImage && !!data.image && !compact;
+  // NEW: Check if we should show minimized version
+  const isMinimized = plannerMode && minimized && !isHovered;
+  
+  // image area: hide if hideImage or if compact (planner cards) or if minimized
+  const showImage = !hideImage && !!data.image && !compact && !isMinimized;
+
+  // Theme-based styles
+  const cardStyles = darkTheme ? {
+    container: {
+      borderRadius: '0.75rem',
+      border: "1px solid rgba(148, 163, 184, 0.1)",
+      padding: isMinimized ? '0.5rem' : (compact ? '0.75rem' : '1rem'),
+      display: "flex",
+      gap: isMinimized ? '0.5rem' : (compact ? '0.75rem' : '1rem'),
+      alignItems: "center",
+      opacity: isDragging ? 0.5 : 1,
+      background: 'rgba(139, 92, 246, 0.05)',
+      backdropFilter: 'blur(8px)',
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      minWidth: 0,
+      transition: 'all 0.2s ease',
+      cursor: 'grab',
+      // NEW: minimized state styles
+      ...(isMinimized && {
+        height: '2.5rem',
+        overflow: 'hidden',
+        padding: '0.25rem 0.5rem',
+        gap: '0.5rem'
+      }),
+      // NEW: hover expansion
+      ...(plannerMode && {
+        ':hover': {
+          zIndex: 1000,
+          transform: 'scale(1.02)'
+        }
+      })
+    },
+    imageContainer: {
+      width: isMinimized ? 24 : (compact ? 40 : (showImage ? 80 : 48)),
+      height: isMinimized ? 24 : (compact ? 40 : (showImage ? 60 : 48)),
+      borderRadius: '0.5rem',
+      overflow: "hidden",
+      background: showImage ? "rgba(30, 41, 59, 0.6)" : "rgba(139, 92, 246, 0.15)",
+      flexShrink: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: '1px solid rgba(148, 163, 184, 0.1)'
+    },
+    title: {
+      fontWeight: 600,
+      fontSize: isMinimized ? '0.75rem' : (compact ? '0.8125rem' : '0.9375rem'),
+      color: "#f8fafc",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    },
+    calories: {
+      fontWeight: 700,
+      fontSize: isMinimized ? '0.625rem' : '0.8125rem',
+      color: '#a78bfa',
+      background: 'rgba(139, 92, 246, 0.1)',
+      padding: isMinimized ? '0.125rem 0.25rem' : '0.25rem 0.5rem',
+      borderRadius: '0.25rem',
+      border: '1px solid rgba(139, 92, 246, 0.2)'
+    },
+    macros: {
+      marginTop: 6,
+      display: isMinimized ? "none" : "flex",
+      gap: 8,
+      alignItems: "center",
+      color: "#94a3b8",
+      fontSize: 11
+    },
+    servingsContainer: {
+      display: isMinimized ? "none" : "flex",
+      justifyContent: "flex-end",
+      gap: 6,
+      alignItems: "center",
+      marginTop: 6
+    },
+    servingsButton: {
+      width: compact ? 24 : 28,
+      height: compact ? 24 : 28,
+      borderRadius: '0.375rem',
+      border: "1px solid rgba(148, 163, 184, 0.2)",
+      background: "rgba(30, 41, 59, 0.8)",
+      color: '#e2e8f0',
+      fontSize: compact ? 12 : 14,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.2s ease'
+    },
+    servingsInput: {
+      width: 52,
+      padding: "0.25rem 0.375rem",
+      borderRadius: '0.375rem',
+      border: "1px solid rgba(148, 163, 184, 0.2)",
+      background: "rgba(30, 41, 59, 0.8)",
+      color: '#e2e8f0',
+      fontSize: 12,
+      textAlign: 'center'
+    },
+    allergenTag: {
+      fontSize: 10,
+      background: "rgba(249, 115, 22, 0.1)",
+      color: "#fb923c",
+      padding: "0.125rem 0.375rem",
+      borderRadius: '0.25rem',
+      border: "1px solid rgba(249, 115, 22, 0.2)"
+    },
+    addButton: {
+      padding: compact ? '0.5rem 0.75rem' : '0.625rem 1rem',
+      borderRadius: '0.5rem',
+      border: "none",
+      background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+      color: "#fff",
+      cursor: "pointer",
+      fontWeight: 600,
+      fontSize: compact ? 11 : 13,
+      transition: 'all 0.2s ease'
+    },
+    viewButton: {
+      padding: compact ? '0.375rem 0.625rem' : '0.5rem 0.75rem',
+      borderRadius: '0.5rem',
+      textDecoration: "none",
+      color: "#94a3b8",
+      border: "1px solid rgba(148, 163, 184, 0.2)",
+      textAlign: "center",
+      display: "inline-block",
+      fontSize: compact ? 10 : 12,
+      transition: 'all 0.2s ease',
+      background: 'rgba(30, 41, 59, 0.6)'
+    }
+  } : {
+    // Light theme styles (original)
+    container: {
+      borderRadius: 8,
+      border: "1px solid rgba(229,231,235,0.6)",
+      padding: isMinimized ? 6 : (compact ? 8 : 12),
+      display: "flex",
+      gap: isMinimized ? 6 : 12,
+      alignItems: "center",
+      opacity: isDragging ? 0.5 : 1,
+      background: "#fff",
+      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+      minWidth: 0,
+      transition: 'all 0.2s ease',
+      // NEW: minimized state styles
+      ...(isMinimized && {
+        height: '2.5rem',
+        overflow: 'hidden',
+        padding: '0.25rem 0.5rem',
+        gap: '0.5rem'
+      })
+    },
+    imageContainer: {
+      width: isMinimized ? 24 : (compact ? 40 : (showImage ? 80 : 48)),
+      height: isMinimized ? 24 : (compact ? 40 : (showImage ? 60 : 48)),
+      borderRadius: 6,
+      overflow: "hidden",
+      background: showImage ? "#f3f4f6" : "#eef2ff",
+      flexShrink: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontWeight: 600,
+      fontSize: isMinimized ? 12 : (compact ? 13 : 15),
+      color: "#0f172a",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    },
+    calories: {
+      fontWeight: 700,
+      fontSize: isMinimized ? 10 : 13
+    },
+    macros: {
+      marginTop: 6,
+      display: isMinimized ? "none" : "flex",
+      gap: 10,
+      alignItems: "center",
+      color: "#6b7280",
+      fontSize: 12
+    },
+    servingsContainer: {
+      display: isMinimized ? "none" : "flex",
+      justifyContent: "flex-end",
+      gap: 6,
+      alignItems: "center",
+      marginTop: 6
+    },
+    servingsButton: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      border: "1px solid rgba(0,0,0,0.06)",
+      background: "#fff"
+    },
+    servingsInput: {
+      width: 56,
+      padding: "4px 6px",
+      borderRadius: 6,
+      border: "1px solid rgba(0,0,0,0.08)"
+    },
+    allergenTag: {
+      fontSize: 11,
+      background: "#fff7ed",
+      color: "#92400e",
+      padding: "2px 6px",
+      borderRadius: 6,
+      border: "1px solid rgba(249,115,22,0.08)"
+    },
+    addButton: {
+      padding: "8px 12px",
+      borderRadius: 8,
+      border: "none",
+      background: "linear-gradient(90deg,#8b5cf6,#06b6d4)",
+      color: "#fff",
+      cursor: "pointer",
+      fontWeight: 600
+    },
+    viewButton: {
+      padding: "6px 10px",
+      borderRadius: 8,
+      textDecoration: "none",
+      color: "#6b7280",
+      border: "1px solid rgba(148,163,184,0.12)",
+      textAlign: "center",
+      display: "inline-block"
+    }
+  };
 
   return (
     <div
       ref={dragRef}
-      style={{
-        borderRadius: 8,
-        border: "1px solid rgba(229,231,235,0.6)",
-        padding: compact ? 8 : 12,
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        opacity: isDragging ? 0.5 : 1,
-        background: "#fff",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-        minWidth: 0
-      }}
+      style={cardStyles.container}
       role="article"
       aria-label={data.name}
+      onMouseEnter={() => setIsHovered(true)} // NEW: hover handlers
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* image / avatar */}
-      <div
-        style={{
-          width: compact ? 40 : (showImage ? 80 : 48),
-          height: compact ? 40 : (showImage ? 60 : 48),
-          borderRadius: 6,
-          overflow: "hidden",
-          background: showImage ? "#f3f4f6" : "#eef2ff",
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div style={cardStyles.imageContainer}>
         {showImage ? (
           <img
             src={data.image}
@@ -143,7 +360,12 @@ export default function MealCard({
           />
         ) : (
           // small placeholder: initials
-          <div style={{ fontWeight: 700, color: "#0f172a", fontSize: compact ? 12 : 14, padding: 4 }}>
+          <div style={{ 
+            fontWeight: 700, 
+            color: darkTheme ? "#a78bfa" : "#0f172a", 
+            fontSize: isMinimized ? 10 : (compact ? 12 : 14), 
+            padding: 4 
+          }}>
             {(data.name || "").split(/\s+/).map(n => n[0]).slice(0,2).join("").toUpperCase()}
           </div>
         )}
@@ -151,36 +373,36 @@ export default function MealCard({
 
       {/* main info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{
-            fontWeight: 600,
-            fontSize: compact ? 13 : 15,
-            color: "#0f172a",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-          }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "space-between", 
+          gap: isMinimized ? 4 : 8 
+        }}>
+          <div style={cardStyles.title}>
             {data.name}
           </div>
 
-          <div style={{ textAlign: "right", minWidth: 90 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>{Math.round(data.calories ?? 0)} cal</div>
+          <div style={{ textAlign: "right", minWidth: isMinimized ? 'auto' : 90 }}>
+            <div style={cardStyles.calories}>{Math.round(data.calories ?? 0)} cal</div>
 
-            {/* show servings */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, alignItems: "center", marginTop: 6 }}>
+            {/* show servings - hidden when minimized */}
+            <div style={cardStyles.servingsContainer}>
               {compact ? (
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); changeServings(-1); }}
-                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", background: "#fff" }}
+                    style={cardStyles.servingsButton}
                     aria-label="Decrease servings"
                   >
                     −
                   </button>
-                  <div style={{ minWidth: 26, textAlign: "center" }}>{servings}</div>
+                  <div style={{ minWidth: 26, textAlign: "center", color: darkTheme ? '#e2e8f0' : 'inherit' }}>
+                    {servings}
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); changeServings(1); }}
-                    style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", background: "#fff" }}
+                    style={cardStyles.servingsButton}
                     aria-label="Increase servings"
                   >
                     +
@@ -193,7 +415,7 @@ export default function MealCard({
                     value={servings}
                     onChange={onServingsInput}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ width: 56, padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.08)" }}
+                    style={cardStyles.servingsInput}
                     aria-label="Servings"
                   />
                 </div>
@@ -202,26 +424,18 @@ export default function MealCard({
           </div>
         </div>
 
-        <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "center", color: "#6b7280", fontSize: 12 }}>
-          <div>P: {data.protein ?? "-" }g</div>
-          <div>C: {data.carbs ?? "-" }g</div>
-          <div>F: {data.fat ?? "-" }g</div>
+        {/* macros - hidden when minimized */}
+        <div style={cardStyles.macros}>
+          <div>P: {data.protein ?? "-"}g</div>
+          <div>C: {data.carbs ?? "-"}g</div>
+          <div>F: {data.fat ?? "-"}g</div>
         </div>
 
-        {Array.isArray(data.allergens) && data.allergens.length > 0 && (
+        {/* allergens - hidden when minimized */}
+        {Array.isArray(data.allergens) && data.allergens.length > 0 && !isMinimized && (
           <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
             {data.allergens.slice(0,3).map(a => (
-              <span
-                key={a}
-                style={{
-                  fontSize: 11,
-                  background: "#fff7ed",
-                  color: "#92400e",
-                  padding: "2px 6px",
-                  borderRadius: 6,
-                  border: "1px solid rgba(249,115,22,0.08)"
-                }}
-              >
+              <span key={a} style={cardStyles.allergenTag}>
                 {a}
               </span>
             ))}
@@ -229,20 +443,12 @@ export default function MealCard({
         )}
       </div>
 
-      {/* controls */}
-      {!compact && (
+      {/* controls - hidden when minimized or compact */}
+      {!compact && !isMinimized && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             onClick={handleAddClick}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: "none",
-              background: "linear-gradient(90deg,#8b5cf6,#06b6d4)",
-              color: "#fff",
-              cursor: "pointer",
-              fontWeight: 600
-            }}
+            style={cardStyles.addButton}
             aria-label={`Add ${data.name} to plan`}
           >
             Add
@@ -251,15 +457,7 @@ export default function MealCard({
           <a
             href={`/recipe/${data.id}`}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              padding: "6px 10px",
-              borderRadius: 8,
-              textDecoration: "none",
-              color: "#6b7280",
-              border: "1px solid rgba(148,163,184,0.12)",
-              textAlign: "center",
-              display: "inline-block"
-            }}
+            style={cardStyles.viewButton}
             aria-label={`View ${data.name}`}
           >
             View
