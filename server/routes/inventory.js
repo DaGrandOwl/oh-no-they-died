@@ -1,7 +1,6 @@
-// routes/inventory.js
 import fp from "fastify-plugin";
 
-export default fp(async function(fastify, opts) {
+export default fp(async function(fastify) {
   const db = fastify.db;
 
   // GET recipe ingredients + base_servings (joins recipe_instructions)
@@ -40,17 +39,6 @@ export default fp(async function(fastify, opts) {
     }
   });
 
-  /**
-   * POST /api/user/inventory/adjust
-   * Body: { adjustments: [ { item_name, delta, unit } ] }
-   * Requires auth.
-   *
-   * Behavior:
-   *  - For existing rows: quantity = quantity + delta (delta may be negative).
-   *  - For missing rows: insert row with quantity = delta (may be negative).
-   *  - Does NOT clamp to 0 (so shortages are represented as negative numbers).
-   *  - Returns the updated inventory rows for the given item_names (or full inventory if none).
-   */
   fastify.post("/api/user/inventory/adjust", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.id;
     const { adjustments } = request.body;

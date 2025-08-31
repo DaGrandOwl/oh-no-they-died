@@ -1,5 +1,4 @@
-// frontend/src/pages/InventoryPage.js
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
