@@ -791,7 +791,7 @@ export default function Recommendations() {
                               borderRadius: '0.25rem',
                               display: 'inline-block'
                             }}>
-                              📦 Inventory match: {Math.round(r.match_pct)}%
+                              Inventory match: {Math.round(r.match_pct)}%
                             </div>
                           )}
                         </div>
@@ -826,8 +826,6 @@ export default function Recommendations() {
                   plan={plan}
                   highlightedRecipe={highlightedRecipe}
                   onSlotClick={handleSlotClick}
-                  onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
-                  onRemove={({ key, index, serverId }) => removeMeal({ key, index, serverId })}
                   dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
                   plannerMode={true}
                   minimized={true}
@@ -843,7 +841,7 @@ export default function Recommendations() {
                   borderRadius: '0.5rem',
                   border: '1px solid rgba(148, 163, 184, 0.1)'
                 }}>
-                  💡 <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
+                  <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
 import { useDrop } from "react-dnd";
 import { toast } from "react-toastify";
@@ -87,7 +87,6 @@ function PlannerCell({
   onSlotClick, 
   onRemove, 
   highlightedRecipe,
-  // NEW: Accept props for MealCard styling
   plannerMode = false,
   minimized = false,
   darkTheme = false
@@ -129,8 +128,8 @@ function PlannerCell({
   }, [meals]);
 
   const cellStyle = darkTheme ? {
-    minHeight: 60, // Reduced from 80
-    padding: "0.15rem", // Reduced padding
+    minHeight: 60,
+    padding: "0.15rem",
     border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
     borderRadius: 4,
     background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
@@ -139,8 +138,8 @@ function PlannerCell({
     position: 'relative',
     overflow: 'hidden'
   } : {
-    minHeight: 60, // Reduced from 80
-    padding: "0.15rem", // Reduced padding
+    minHeight: 60,
+    padding: "0.15rem",
     border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
     borderRadius: 4,
     background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
@@ -203,7 +202,6 @@ function PlannerCell({
                 isoDate={isoDate}
                 mealTime={mealTime}
                 onAddToPlan={onDropMeal}
-                // NEW: Pass the planner-specific props
                 plannerMode={plannerMode}
                 minimized={minimized}
                 darkTheme={darkTheme}
@@ -242,14 +240,40 @@ function PlannerCell({
 export default function WeekPlanner({ 
   dateForWeekday, 
   highlightedRecipe, 
-  onSlotClick, 
-  // NEW: Accept the planner styling props
+  onSlotClick,
   plannerMode = false,
   minimized = false,
   darkTheme = false,
   ...rest 
 }) {
-  const weekDates = useMemo(() => buildWeekDates(dateForWeekday), [dateForWeekday]);
+  // weekOffset: 0 -> current week; -1 previous; +1 next, etc.
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  // helper to build isoDate based on weekday + weekOffset
+  const computeIsoForWeekday = useCallback((weekdayKey) => {
+    // weekdayKey is "sunday", "monday", etc.
+    // find the date for sunday of the target week then add offset
+    const targetWeekStart = (() => {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const sunday = new Date(today);
+      sunday.setDate(today.getDate() - dayOfWeek + (weekOffset * 7));
+      sunday.setHours(0,0,0,0);
+      return sunday;
+    })();
+
+    const idx = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"].indexOf(weekdayKey);
+    if (idx === -1) return null;
+    const d = new Date(targetWeekStart);
+    d.setDate(targetWeekStart.getDate() + idx);
+    // return local YYYY-MM-DD (used for display and for backend conversion)
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }, [weekOffset]);
+
+  const weekDates = useMemo(() => buildWeekDates(computeIsoForWeekday), [computeIsoForWeekday]);
   const { prefs } = usePreferences();
   const { plan, addMeal, removeMeal, syncRange } = usePlan();
 
@@ -367,6 +391,11 @@ export default function WeekPlanner({
     }
   }, [weekDates, syncRange]);
 
+  // Auto-refresh on mount and whenever weekOffset (the displayed week) changes
+  useEffect(() => {
+    refreshWeek();
+  }, [weekOffset, refreshWeek]);
+
   const handleRemove = useCallback(async ({ key, index, serverId, clientId, recipeId }) => {
     const arr = Array.isArray(plan[key]) ? plan[key] : [];
     let idx = typeof index === 'number' ? index : -1;
@@ -385,6 +414,15 @@ export default function WeekPlanner({
     }
   }, [plan, removeMeal]);
 
+  // compute today local (for highlight)
+  const todayLocal = (() => {
+    const t = new Date();
+    const y = t.getFullYear();
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
   // NEW: Container styling based on theme
   const containerStyle = darkTheme ? {
     padding: 16,
@@ -402,7 +440,7 @@ export default function WeekPlanner({
     margin: 0
   };
 
-  const refreshButtonStyle = darkTheme ? {
+  const navButtonStyle = darkTheme ? {
     padding: "6px 10px", 
     borderRadius: 8, 
     border: "1px solid rgba(148, 163, 184, 0.2)", 
@@ -423,7 +461,7 @@ export default function WeekPlanner({
     background: 'rgba(30, 41, 59, 0.3)',
     borderRadius: '0.5rem',
     overflow: 'hidden',
-    tableLayout: 'fixed' // Add this to control table layout
+    tableLayout: 'fixed'
   } : {
     width: "100%", 
     borderCollapse: "collapse",
@@ -445,15 +483,15 @@ export default function WeekPlanner({
     color: "#a78bfa",
     textAlign: "center",
     background: "rgba(139,92,246,0.1)",
-    padding: 4, // Reduced padding
-    fontSize: '0.8rem' // Smaller font
+    padding: 4,
+    fontSize: '0.8rem'
   } : {
     fontWeight: 600,
     color: "#a78bfa",
     textAlign: "center",
     background: "rgba(199, 180, 243, 0.1)",
-    padding: 4, // Reduced padding
-    fontSize: '0.8rem' // Smaller font
+    padding: 4,
+    fontSize: '0.8rem'
   };
 
   return (
@@ -469,8 +507,10 @@ export default function WeekPlanner({
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <h2 style={headerStyle}>Weekly Planner</h2>
-        <div>
-          <button onClick={refreshWeek} style={refreshButtonStyle}>Refresh</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => setWeekOffset(o => o - 1)} style={navButtonStyle}>Previous</button>
+          <button onClick={() => setWeekOffset(0)} style={navButtonStyle}>This Week</button>
+          <button onClick={() => setWeekOffset(o => o + 1)} style={navButtonStyle}>Next</button>
         </div>
       </div>
 
@@ -478,12 +518,17 @@ export default function WeekPlanner({
         <thead>
           <tr>
             <th style={{ textAlign: "left", width: 120, ...thStyle }}>Meal Time</th>
-            {weekDates.map(({ day, displayDate }, idx) => (
-              <th key={`${day}-${idx}`} style={thStyle}>
-                <div style={{ fontSize: 12, color: darkTheme ? "#94a3b8" : "#6b7280" }}>{displayDate}</div>
-
-              </th>
-            ))}
+            {weekDates.map(({ day, displayDate, isoDate }, idx) => {
+              const isToday = isoDate === todayLocal;
+              const thTodayStyle = isToday ? { background: darkTheme ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.12)", borderRadius: 6 } : {};
+              return (
+                <th key={`${day}-${idx}`} style={{ ...thStyle, ...thTodayStyle }}>
+                  <div style={{ fontSize: 12, color: darkTheme ? "#94a3b8" : "#6b7280" }}>{displayDate}</div>
+                  <div style={{ fontWeight: 600 }}>{day}</div>
+                  <div style={{ fontSize: 12, color: darkTheme ? "#94a3b8" : "#94a3b8" }}>{isoDate}</div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -506,7 +551,6 @@ export default function WeekPlanner({
                     onRemove={handleRemove}
                     highlightedRecipe={highlightedRecipe}
                     onSlotClick={onSlotClick}
-                    // NEW: Pass the planner-specific props down
                     plannerMode={plannerMode}
                     minimized={minimized}
                     darkTheme={darkTheme}

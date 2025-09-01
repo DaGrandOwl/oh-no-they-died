@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { RefreshCw, AlertTriangle, Package, PlusCircle } from "lucide-react";
 
 function titleCase(s) {
   if (!s) return s;
@@ -7,11 +8,11 @@ function titleCase(s) {
 }
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState([]); // user's inventory rows (array)
-  const [known, setKnown] = useState([]); // master known ingredients (array of {item_name, unit})
-  const [changes, setChanges] = useState([]); // upcoming changes (array)
+  const [inventory, setInventory] = useState([]);
+  const [known, setKnown] = useState([]);
+  const [changes, setChanges] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState({}); // { item_name: <string qty> }
+  const [editing, setEditing] = useState({});
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -26,7 +27,6 @@ export default function InventoryPage() {
   async function fetchAll() {
     setLoading(true);
     try {
-      // fetch user inventory
       const [res1, res2, res3] = await Promise.all([
         fetch(`${process.env.REACT_APP_API_URL}/api/user/inventory`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
         fetch(`${process.env.REACT_APP_API_URL}/api/ingredients`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
@@ -41,7 +41,6 @@ export default function InventoryPage() {
         toast.error("Failed to load inventory");
         setInventory([]);
       } else {
-        // backend returns { ok: true, inventory: [...] }
         setInventory(Array.isArray(d1?.inventory) ? d1.inventory : []);
       }
 
@@ -61,7 +60,6 @@ export default function InventoryPage() {
         console.error("Failed to load upcoming changes", d3);
         setChanges([]);
       } else {
-        // expecting { ok:true, changes: [...] } or array
         const ch = d3?.changes ?? d3?.updated ?? d3 ?? [];
         setChanges(Array.isArray(ch) ? ch : []);
       }
@@ -95,9 +93,7 @@ export default function InventoryPage() {
         toast.error("Failed to save quantity");
         return;
       }
-      // backend returns { ok:true, updated: [...] }
       toast.success("Saved");
-      // refresh locally
       await fetchAll();
     } catch (err) {
       console.error("Adjust failed", err);
@@ -129,11 +125,72 @@ export default function InventoryPage() {
     }
   }
 
-  // compute quick lookup maps
+  // Styling constants
+  const pageStyle = {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    color: '#f8fafc',
+    padding: '2rem'
+  };
+
+  const cardStyle = {
+    background: 'rgba(30, 41, 59, 0.6)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '1rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)',
+    padding: '1.5rem',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    marginBottom: '1.5rem'
+  };
+
+  const buttonPrimary = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.5rem 1rem',
+    borderRadius: '0.5rem',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    color: 'white'
+  };
+
+  const buttonGhost = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.5rem 1rem',
+    borderRadius: '0.5rem',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    background: 'transparent',
+    color: '#94a3b8',
+    border: '1px solid rgba(148, 163, 184, 0.2)'
+  };
+
+  const inputStyle = {
+    padding: '0.5rem 0.75rem',
+    background: 'rgba(30, 41, 59, 0.8)',
+    border: '1px solid rgba(148, 163, 184, 0.2)',
+    borderRadius: '0.5rem',
+    color: '#f8fafc',
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'all 0.2s',
+    width: '80px'
+  };
+
+  // Compute data
   const invMap = {};
   inventory.forEach(r => { invMap[r.item_name] = r; });
 
-  // compute upcoming net adjustments per item in next 7 days
   const upcomingNet = {};
   changes.forEach(c => {
     const name = c.item_name;
@@ -141,127 +198,276 @@ export default function InventoryPage() {
     upcomingNet[name] = (upcomingNet[name] || 0) + val;
   });
 
-  // build "in inventory" list and "not in inventory" list
   const inInventory = inventory.filter(i => (Number(i.quantity || 0) !== 0));
   const notInventory = known.filter(k => {
     const present = invMap[k.item_name];
     return !present || Number(present.quantity || 0) === 0;
   });
 
-  // within inInventory split into runOutSoon and remaining
   const runOutSoon = [];
   const remaining = [];
   inInventory.forEach(item => {
     const current = Number(item.quantity || 0);
     const projected = current + (upcomingNet[item.item_name] || 0);
-    // will run out if projected <= 0 within next week
     if (projected <= 0) runOutSoon.push({ ...item, projected });
     else remaining.push({ ...item, projected });
   });
 
-  if (loading) return <div style={{ padding: 20 }}>Loading inventory...</div>;
+  if (loading) {
+    return (
+      <div style={pageStyle}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '50vh' 
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.75rem',
+            color: '#94a3b8'
+          }}>
+            <RefreshCw className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+            Loading inventory...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>My Inventory</h2>
+    <div style={pageStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
+            My Inventory
+          </h2>
+          <p style={{ fontSize: '1rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+            Manage your ingredients and track upcoming usage
+          </p>
+        </div>
+        <button 
+          onClick={fetchAll} 
+          style={buttonGhost}
+          title="Refresh inventory"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
+      </div>
 
-      <section style={{ marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 8 }}>Will run out within 7 days</h3>
-        {runOutSoon.length === 0 ? <div style={{ color: "#6b7280" }}>No items will fully run out within next week.</div> :
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ padding: 8 }}>Item</th>
-                <th style={{ padding: 8 }}>Quantity</th>
-                <th style={{ padding: 8 }}>Unit</th>
-                <th style={{ padding: 8 }}>Projected (7d)</th>
-                <th style={{ padding: 8 }}>Last Updated</th>
-                <th style={{ padding: 8 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runOutSoon.map(item => (
-                <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: 8, fontWeight: 500 }}>{titleCase(item.item_name)}</td>
-                  <td style={{ padding: 8 }}>
-                    <input value={editing[item.item_name] ?? String(item.quantity ?? 0)} onChange={(e) => setEditing(prev => ({ ...prev, [item.item_name]: e.target.value }))} style={{ width: 80 }} />
-                  </td>
-                  <td style={{ padding: 8 }}>{item.unit || "-"}</td>
-                  <td style={{ padding: 8, color: "#b91c1c" }}>{item.projected}</td>
-                  <td style={{ padding: 8, color: "#6b7280", fontSize: 12 }}>{new Date(item.updated_at).toLocaleString()}</td>
-                  <td style={{ padding: 8 }}>
-                    <button onClick={() => saveQuantity(item, editing[item.item_name] ?? String(item.quantity ?? 0))} style={{ marginRight: 6 }}>Save</button>
-                  </td>
+      {/* Will run out soon section */}
+      <section style={cardStyle}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          marginBottom: '1rem',
+          color: '#f87171'
+        }}>
+          <AlertTriangle size={20} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#f8fafc', margin: 0 }}>
+            Will run out within 7 days
+          </h3>
+        </div>
+        
+        {runOutSoon.length === 0 ? (
+          <div style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center' }}>
+            No items will fully run out within next week.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(148, 163, 184, 0.1)' }}>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Item</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Quantity</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Unit</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Projected (7d)</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Last Updated</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        }
+              </thead>
+              <tbody>
+                {runOutSoon.map(item => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.05)' }}>
+                    <td style={{ padding: '1rem', fontWeight: '500', color: '#e2e8f0' }}>{titleCase(item.item_name)}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <input 
+                        value={editing[item.item_name] ?? String(item.quantity ?? 0)} 
+                        onChange={(e) => setEditing(prev => ({ ...prev, [item.item_name]: e.target.value }))} 
+                        style={inputStyle}
+                        type="number"
+                        min="0"
+                        step="0.1"
+                      />
+                    </td>
+                    <td style={{ padding: '1rem', color: '#94a3b8' }}>{item.unit || "-"}</td>
+                    <td style={{ padding: '1rem', color: '#f87171', fontWeight: '500' }}>{item.projected}</td>
+                    <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                      {new Date(item.updated_at).toLocaleString()}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <button 
+                        onClick={() => saveQuantity(item, editing[item.item_name] ?? String(item.quantity ?? 0))} 
+                        style={buttonPrimary}
+                      >
+                        Save
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
-      <section style={{ marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 8 }}>Remaining in inventory</h3>
-        {remaining.length === 0 ? <div style={{ color: "#6b7280" }}>No remaining items.</div> :
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ padding: 8 }}>Item</th>
-                <th style={{ padding: 8 }}>Quantity</th>
-                <th style={{ padding: 8 }}>Unit</th>
-                <th style={{ padding: 8 }}>Projected (7d)</th>
-                <th style={{ padding: 8 }}>Last Updated</th>
-                <th style={{ padding: 8 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {remaining.map(item => (
-                <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: 8, fontWeight: 500 }}>{titleCase(item.item_name)}</td>
-                  <td style={{ padding: 8 }}>
-                    <input value={editing[item.item_name] ?? String(item.quantity ?? 0)} onChange={(e) => setEditing(prev => ({ ...prev, [item.item_name]: e.target.value }))} style={{ width: 80 }} />
-                  </td>
-                  <td style={{ padding: 8 }}>{item.unit || "-"}</td>
-                  <td style={{ padding: 8 }}>{item.projected}</td>
-                  <td style={{ padding: 8, color: "#6b7280", fontSize: 12 }}>{new Date(item.updated_at).toLocaleString()}</td>
-                  <td style={{ padding: 8 }}>
-                    <button onClick={() => saveQuantity(item, editing[item.item_name] ?? String(item.quantity ?? 0))} style={{ marginRight: 6 }}>Save</button>
-                  </td>
+      {/* Remaining inventory section */}
+      <section style={cardStyle}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          marginBottom: '1rem',
+          color: '#a78bfa'
+        }}>
+          <Package size={20} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#f8fafc', margin: 0 }}>
+            Remaining in inventory
+          </h3>
+        </div>
+        
+        {remaining.length === 0 ? (
+          <div style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center' }}>
+            No remaining items.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(148, 163, 184, 0.1)' }}>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Item</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Quantity</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Unit</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Projected (7d)</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Last Updated</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        }
+              </thead>
+              <tbody>
+                {remaining.map(item => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.05)' }}>
+                    <td style={{ padding: '1rem', fontWeight: '500', color: '#e2e8f0' }}>{titleCase(item.item_name)}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <input 
+                        value={editing[item.item_name] ?? String(item.quantity ?? 0)} 
+                        onChange={(e) => setEditing(prev => ({ ...prev, [item.item_name]: e.target.value }))} 
+                        style={inputStyle}
+                        type="number"
+                        min="0"
+                        step="0.1"
+                      />
+                    </td>
+                    <td style={{ padding: '1rem', color: '#94a3b8' }}>{item.unit || "-"}</td>
+                    <td style={{ padding: '1rem', color: '#4ade80', fontWeight: '500' }}>{item.projected}</td>
+                    <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                      {new Date(item.updated_at).toLocaleString()}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <button 
+                        onClick={() => saveQuantity(item, editing[item.item_name] ?? String(item.quantity ?? 0))} 
+                        style={buttonPrimary}
+                      >
+                        Save
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
-      <section>
-        <h3 style={{ marginBottom: 8 }}>Known items not in your inventory</h3>
-        {notInventory.length === 0 ? <div style={{ color: "#6b7280" }}>No known items missing.</div> :
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ padding: 8 }}>Item</th>
-                <th style={{ padding: 8 }}>Add Quantity</th>
-                <th style={{ padding: 8 }}>Unit</th>
-                <th style={{ padding: 8 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {notInventory.map(k => (
-                <tr key={k.item_name} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: 8, fontWeight: 500 }}>{titleCase(k.item_name)}</td>
-                  <td style={{ padding: 8 }}>
-                    <input value={editing[`known-${k.item_name}`] ?? ""} onChange={(e) => setEditing(prev => ({ ...prev, [`known-${k.item_name}`]: e.target.value }))} style={{ width: 80 }} placeholder="0" />
-                  </td>
-                  <td style={{ padding: 8 }}>{k.unit || "-"}</td>
-                  <td style={{ padding: 8 }}>
-                    <button onClick={() => saveNewForKnown(k.item_name, k.unit, editing[`known-${k.item_name}`] ?? "0")}>Add</button>
-                  </td>
+      {/* Known items section */}
+      <section style={cardStyle}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          marginBottom: '1rem',
+          color: '#06b6d4'
+        }}>
+          <PlusCircle size={20} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#f8fafc', margin: 0 }}>
+            Known items not in your inventory
+          </h3>
+        </div>
+        
+        {notInventory.length === 0 ? (
+          <div style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center' }}>
+            No known items missing.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(148, 163, 184, 0.1)' }}>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Item</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Add Quantity</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Unit</th>
+                  <th style={{ padding: '0.75rem', fontWeight: '600', color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        }
+              </thead>
+              <tbody>
+                {notInventory.map(k => (
+                  <tr key={k.item_name} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.05)' }}>
+                    <td style={{ padding: '1rem', fontWeight: '500', color: '#e2e8f0' }}>{titleCase(k.item_name)}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <input 
+                        value={editing[`known-${k.item_name}`] ?? ""} 
+                        onChange={(e) => setEditing(prev => ({ ...prev, [`known-${k.item_name}`]: e.target.value }))} 
+                        style={inputStyle}
+                        placeholder="0"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                      />
+                    </td>
+                    <td style={{ padding: '1rem', color: '#94a3b8' }}>{k.unit || "-"}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <button 
+                        onClick={() => saveNewForKnown(k.item_name, k.unit, editing[`known-${k.item_name}`] ?? "0")}
+                        style={buttonPrimary}
+                      >
+                        Add
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          input:focus {
+            border-color: #8b5cf6;
+            outline: none;
+          }
+          button:hover {
+            opacity: 0.9;
+          }
+        `}
+      </style>
     </div>
   );
 }
