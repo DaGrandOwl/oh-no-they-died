@@ -24,12 +24,27 @@ export default fp(async function(fastify) {
     }
   });
 
+// GET known ingredients (used for not-in-inventory)
+  fastify.get("/api/ingredients", async (request, reply) => {
+    try {
+      // master list is indexed by user_id = 0
+      const [rows] = await fastify.db.query(
+        `SELECT DISTINCT item_name, unit FROM recipe_ingredients WHERE recipe_id = 0 AND item_name IS NOT NULL AND item_name <> '' ORDER BY item_name ASC`
+      );
+      const list = (rows || []).map(r => ({ item_name: r.item_name, unit: r.unit }));
+      return reply.send({ ok: true, ingredients: list });
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ error: "Failed to fetch known ingredients" });
+    }
+  });
+
   // GET user inventory (returns all items for logged-in user)
   fastify.get("/api/user/inventory", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.id;
     try {
       const [rows] = await db.query(
-        "SELECT id, item_name, quantity, unit, updated_at FROM user_inventory WHERE user_id = ?",
+        "SELECT id, item_name, quantity, unit, updated_at FROM user_inventory WHERE user_id = ? ORDER BY item_name ASC",
         [userId]
       );
       return { ok: true, inventory: rows || [] };
@@ -39,6 +54,7 @@ export default fp(async function(fastify) {
     }
   });
 
+  // POST adjust user inventory (batch)
   fastify.post("/api/user/inventory/adjust", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.id;
     const { adjustments } = request.body;
@@ -69,7 +85,9 @@ export default fp(async function(fastify) {
 
         if (rows.length > 0) {
           const row = rows[0];
-          const newQty = (Number(row.quantity || 0) + delta);
+          let newQty = Number(row.quantity || 0) + delta;
+          // ensure non-null numeric; allow negative to indicate shortage
+          if (!Number.isFinite(newQty)) newQty = 0;
           await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, row.id]);
           touchedNames.add(item_name);
         } else {
@@ -87,14 +105,11 @@ export default fp(async function(fastify) {
       if (namesArr.length > 0) {
         const placeholders = namesArr.map(() => "?").join(",");
         const params = [userId, ...namesArr];
-        // Use item_name IN (...) - restrict to this user_id
         const [updatedRows] = await db.query(
           `SELECT id, item_name, quantity, unit, updated_at FROM user_inventory WHERE user_id = ? AND item_name IN (${placeholders})`,
           params
         );
         updated = updatedRows || [];
-      } else {
-        updated = [];
       }
 
       return reply.send({ ok: true, updated });
@@ -104,6 +119,31 @@ export default fp(async function(fastify) {
       return reply.code(500).send({ error: "Failed to adjust inventory" });
     } finally {
       conn.release();
+    }
+  });
+
+  // GET user inventory changes over date range (default next 7 days)
+  fastify.get("/api/user/inventory/changes", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    try {
+      const userId = request.user.id;
+      const days = Number(request.query.days ?? 7);
+      const today = new Date();
+      const end = new Date(today);
+      end.setDate(end.getDate() + days);
+      const startStr = today.toISOString().slice(0,10);
+      const endStr = end.toISOString().slice(0,10);
+
+      const [rows] = await fastify.db.query(
+        `SELECT id, user_id, mealplan_id, item_name, delta, unit, DATE_FORMAT(scheduled_date, '%Y-%m-%d') AS scheduled_date
+        FROM user_inventory_changes
+        WHERE user_id = ? AND scheduled_date BETWEEN ? AND ?
+        ORDER BY scheduled_date ASC`,
+        [userId, startStr, endStr]
+      );
+      return reply.send({ ok: true, changes: rows || [] });
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ error: "Failed to fetch inventory changes" });
     }
   });
 });

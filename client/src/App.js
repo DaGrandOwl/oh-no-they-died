@@ -25,15 +25,15 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/settings" element={<Settings />} />   
-          <Route path="/inventory" element={<Inventory />} /> 
 
           <Route path="/test" element={<Recommendations />} /> {/* temp */}
           
           {/* Routes with Layout (Sidebar) */}
           <Route element={<Layout />}> 
+            <Route path="/settings" element={<Settings />} />   
+            <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} /> 
             <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
-            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/recipe" element={<RecipeList />} />
             <Route path="/recipe/:id" element={<RecipeID />} />
           </Route>

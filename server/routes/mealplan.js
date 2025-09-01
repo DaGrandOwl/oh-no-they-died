@@ -8,64 +8,177 @@ export default fp(async function (fastify) {
     return !Number.isNaN(d.getTime());
   }
 
-  // POST create a plan item
+  // Apply pending adjustments to user_inventory
+  async function applyAdjustmentsToInventory(db, userId, adjustments) {
+    // adjustments: [{ item_name, delta, unit }]
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      for (const adj of adjustments) {
+        const item_name = String(adj.item_name || "").trim();
+        const delta = Number(adj.delta || 0);
+        const unit = adj.unit || null;
+        if (!item_name) continue;
+        const [rows] = await conn.query(
+          "SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1",
+          [userId, item_name, unit, unit]
+        );
+        if (rows.length > 0) {
+          const row = rows[0];
+          let newQty = Number(row.quantity || 0) + delta;
+          if (!Number.isFinite(newQty)) newQty = 0;
+          await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, row.id]);
+        } else {
+          await conn.query("INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)", [userId, item_name, delta, unit]);
+        }
+      }
+      await conn.commit();
+      return true;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  // POST /api/user/mealplan (create mealplan and schedule/apply inventory changes)
   fastify.post("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const conn = await fastify.db.getConnection();
     try {
       const userId = request.user?.id;
       const { recipeId, date, mealType, servings } = request.body || {};
-
       if (!recipeId || !date || !mealType || servings == null) {
+        conn.release();
         return reply.status(400).send({ error: "Missing required fields" });
       }
       if (!isValidDateYYYYMMDD(date)) {
+        conn.release();
         return reply.status(400).send({ error: "Invalid date format, expected YYYY-MM-DD" });
       }
-
       const safeMealType = String(mealType).toLowerCase();
 
+      // write mealplan row (scheduled_date is stored as the local YYYY-MM-DD provided by client)
+      await conn.beginTransaction();
       const sql = `
-        INSERT INTO user_meal_plan (user_id, recipe_id, scheduled_date, meal_type, servings)
+        INSERT INTO user_mealplan (user_id, recipe_id, scheduled_date, meal_type, servings)
         VALUES (?, ?, ?, ?, ?)
       `;
-      const [result] = await fastify.db.query(sql, [userId, recipeId, date, safeMealType, Number(servings)]);
+      const [result] = await conn.query(sql, [userId, recipeId, date, safeMealType, Number(servings)]);
+      const insertedId = result.insertId;
 
-      // fetch the inserted row and include recipe metadata (join recipe_general + recipe_instructions)
-      const [rows] = await fastify.db.query(
+      // fetch inserted row with recipe metadata (same as before)
+      const [rows] = await conn.query(
         `SELECT
-           ump.id,
-           ump.recipe_id AS recipeId,
-           DATE_FORMAT(ump.scheduled_date, '%Y-%m-%d') AS date,
-           LOWER(ump.meal_type) AS mealType,
-           ump.servings,
-           DATE_FORMAT(ump.created_at, '%Y-%m-%dT%H:%i:%sZ') AS created_at,
-           rg.name,
-           rg.calories,
-           rg.protein,
-           rg.carbs,
-           rg.fat,
-           rg.allergens,
-           ri.base_servings,
-           ri.appx_mass,
-           ri.image AS image
-         FROM user_meal_plan AS ump
-         LEFT JOIN recipe_general AS rg ON rg.id = ump.recipe_id
-         LEFT JOIN recipe_instructions AS ri ON ri.recipe_id = rg.id
-         WHERE ump.id = ? AND ump.user_id = ?`,
-        [result.insertId, userId]
+          ump.id,
+          ump.recipe_id AS recipeId,
+          DATE_FORMAT(ump.scheduled_date, '%Y-%m-%d') AS date,
+          LOWER(ump.meal_type) AS mealType,
+          ump.servings,
+          DATE_FORMAT(ump.created_at, '%Y-%m-%dT%H:%i:%sZ') AS created_at,
+          rg.name,
+          rg.calories,
+          rg.protein,
+          rg.carbs,
+          rg.fat,
+          rg.allergens,
+          ri.base_servings,
+          ri.appx_mass,
+          ri.image AS image
+        FROM user_mealplan AS ump
+        LEFT JOIN recipe_general AS rg ON rg.id = ump.recipe_id
+        LEFT JOIN recipe_instructions AS ri ON ri.recipe_id = rg.id
+        WHERE ump.id = ? AND ump.user_id = ?`,
+        [insertedId, userId]
       );
 
       const saved = rows[0] || null;
-      // normalize allergens to array on server side (helps frontend)
       if (saved && saved.allergens && typeof saved.allergens === "string") {
         saved.allergens = saved.allergens.split(",").map(s => s.trim()).filter(Boolean);
-      } else if (saved) {
-        saved.allergens = saved.allergens || [];
+      } else if (saved) saved.allergens = saved.allergens || [];
+
+      // derive ingredient deltas from recipe_ingredients
+      const [ings] = await conn.query(
+        `SELECT ri.id, ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
+         FROM recipe_ingredients ri
+         LEFT JOIN recipe_instructions rins ON rins.recipe_id = ri.recipe_id
+         WHERE ri.recipe_id = ?`,
+        [recipeId]
+      );
+
+      const baseServings = (ings && ings.length && ings[0].base_servings)
+        ? Number(ings[0].base_servings)
+        : (saved?.base_servings ? Number(saved.base_servings) : 1);
+      const serv = Number(servings || 1);
+
+      // Build adjustments array: negative means consumption
+      const adjustments = [];
+      for (const ing of (ings || [])) {
+        const itemName = String(ing.item_name || "").trim();
+        if (!itemName) continue;
+        const rawAmt = Number(ing.quantity || 0) || 0;
+        const qty = rawAmt * (serv / (Number(baseServings) || 1));
+        if (qty === 0) continue;
+        adjustments.push({ item_name: itemName, delta: -qty, unit: ing.unit || null });
       }
+
+      // Determine whether client asked for immediate apply (applyNow) — fallback to legacy UTC comparison
+      let applyNow = false;
+      if (typeof request.body?.applyNow !== "undefined") {
+        applyNow = !!request.body.applyNow;
+      } else {
+        // legacy behavior: compare provided date against server's UTC "today"
+        const todayUTC = new Date().toISOString().slice(0,10);
+        applyNow = (date === todayUTC);
+      }
+
+      if (applyNow) {
+        // apply immediately to user_inventory
+        if (adjustments.length > 0) {
+          // apply via same connection / transaction to keep consistency
+          for (const adj of adjustments) {
+            const item_name = String(adj.item_name || "").trim();
+            const delta = Number(adj.delta || 0);
+            const unit = adj.unit || null;
+            if (!item_name) continue;
+
+            // lock/select row for update
+            const [invRows] = await conn.query(
+              `SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1 FOR UPDATE`,
+              [userId, item_name, unit, unit]
+            );
+            if (invRows.length > 0) {
+              const rowInv = invRows[0];
+              let newQty = Number(rowInv.quantity || 0) + delta;
+              if (!Number.isFinite(newQty)) newQty = 0;
+              await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, rowInv.id]);
+            } else {
+              await conn.query("INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)", [userId, item_name, delta, unit]);
+            }
+          }
+        }
+      } else {
+        // schedule into user_inventory_changes referencing mealplan id (future behavior)
+        if (adjustments.length > 0) {
+          for (const adj of adjustments) {
+            await conn.query(
+              `INSERT INTO user_inventory_changes (user_id, mealplan_id, item_name, delta, unit, scheduled_date)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [userId, insertedId, adj.item_name, adj.delta, adj.unit, date]
+            );
+          }
+        }
+      }
+
+      await conn.commit();
+      conn.release();
 
       return reply.status(201).send(saved);
     } catch (err) {
+      try { await conn.rollback(); } catch (e) { /* ignore */ }
+      conn.release();
       fastify.log.error(err);
-      reply.status(500).send({ error: "Server error" });
+      return reply.status(500).send({ error: "Server error" });
     }
   });
 
@@ -92,7 +205,7 @@ export default fp(async function (fastify) {
           ri.base_servings,
           ri.appx_mass,
           ri.image AS image
-        FROM user_meal_plan AS ump
+        FROM user_mealplan AS ump
         LEFT JOIN recipe_general AS rg ON rg.id = ump.recipe_id
         LEFT JOIN recipe_instructions AS ri ON ri.recipe_id = rg.id
         WHERE ump.user_id = ?
@@ -151,19 +264,105 @@ export default fp(async function (fastify) {
 
   // DELETE by server id
   fastify.delete("/api/user/mealplan/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const conn = await fastify.db.getConnection();
     try {
       const userId = request.user?.id;
       const id = parseInt(request.params.id, 10);
-      if (!id) return reply.status(400).send({ error: "Invalid id" });
+      if (!id) {
+        conn.release();
+        return reply.status(400).send({ error: "Invalid id" });
+      }
 
-      const [rows] = await fastify.db.query("SELECT id FROM user_meal_plan WHERE id = ? AND user_id = ?", [id, userId]);
-      if (!rows.length) return reply.status(404).send({ error: "Not found" });
+      // fetch and validate the mealplan row (format date via SQL to avoid timezone drift)
+      const [rows] = await conn.query(
+        "SELECT id, recipe_id, DATE_FORMAT(scheduled_date, '%Y-%m-%d') AS scheduled_date, servings FROM user_mealplan WHERE id = ? AND user_id = ?",
+        [id, userId]
+      );
+      if (!rows.length) {
+        conn.release();
+        return reply.status(404).send({ error: "Not found" });
+      }
+      const row = rows[0];
+      const scheduledDate = row.scheduled_date; // already 'YYYY-MM-DD'
 
-      await fastify.db.query("DELETE FROM user_meal_plan WHERE id = ? AND user_id = ?", [id, userId]);
+      // parse applyNow query param (client requested immediate refund)
+      const applyNowQuery = request.query?.applyNow;
+      const applyNow = (applyNowQuery === "1" || applyNowQuery === "true" || applyNowQuery === 1 || applyNowQuery === true);
+
+      // compute server's UTC today (fallback)
+      const todayUTC = new Date().toISOString().slice(0,10);
+
+      await conn.beginTransaction();
+
+      // delete any scheduled inventory changes referencing this mealplan first (do not require user_id)
+      await conn.query("DELETE FROM user_inventory_changes WHERE mealplan_id = ?", [id]);
+
+      // Decide if we should refund (apply positive deltas) — either client asked applyNow OR scheduledDate <= todayUTC
+      const shouldRefund = applyNow || (scheduledDate && scheduledDate <= todayUTC);
+
+      if (!shouldRefund) {
+        // future: already removed scheduled changes; just delete mealplan
+        await conn.query("DELETE FROM user_mealplan WHERE id = ? AND user_id = ?", [id, userId]);
+        await conn.commit();
+        conn.release();
+        return reply.send({ success: true });
+      }
+
+      // today or client-requested: refund applied inventory (positive deltas) and delete mealplan
+      const [ings] = await conn.query(
+        `SELECT ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
+         FROM recipe_ingredients ri
+         LEFT JOIN recipe_instructions rins ON rins.recipe_id = ri.recipe_id
+         WHERE ri.recipe_id = ?`,
+        [row.recipe_id]
+      );
+
+      const baseServings = (ings && ings.length && ings[0].base_servings) ? Number(ings[0].base_servings) : 1;
+      const serv = Number(row.servings || 1);
+
+      const adjustments = [];
+      for (const ing of (ings || [])) {
+        const itemName = String(ing.item_name || "").trim();
+        if (!itemName) continue;
+        const rawAmt = Number(ing.quantity || 0) || 0;
+        const qty = rawAmt * (serv / (Number(baseServings) || 1));
+        if (qty === 0) continue;
+        adjustments.push({ item_name: itemName, delta: qty, unit: ing.unit || null }); // positive refund
+      }
+
+      // Apply refunds within the same transaction (row locks for update)
+      for (const adj of adjustments) {
+        const item_name = String(adj.item_name || "").trim();
+        const delta = Number(adj.delta || 0);
+        const unit = adj.unit || null;
+        if (!item_name) continue;
+
+        // lock inventory row for update
+        const [invRows] = await conn.query(
+          `SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1 FOR UPDATE`,
+          [userId, item_name, unit, unit]
+        );
+        if (invRows.length > 0) {
+          const rowInv = invRows[0];
+          let newQty = Number(rowInv.quantity || 0) + delta;
+          if (!Number.isFinite(newQty)) newQty = 0;
+          await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, rowInv.id]);
+        } else {
+          await conn.query("INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)", [userId, item_name, delta, unit]);
+        }
+      }
+
+      // finally delete mealplan
+      await conn.query("DELETE FROM user_mealplan WHERE id = ? AND user_id = ?", [id, userId]);
+
+      await conn.commit();
+      conn.release();
       return reply.send({ success: true });
     } catch (err) {
+      try { await conn.rollback(); } catch (e) { /* ignore */ }
+      conn.release();
       fastify.log.error(err);
-      reply.status(500).send({ error: "Server error" });
+      return reply.status(500).send({ error: "Server error" });
     }
   });
 });
