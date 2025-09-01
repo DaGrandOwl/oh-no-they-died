@@ -1,177 +1,85 @@
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import {
-  Calendar,
-  ShoppingCart,
-  Utensils,
-  Settings,
-  Sparkles,
-  Moon,
-  Sun,
-  Shield,
-} from "lucide-react";
 import { usePreferences } from "../contexts/PrefContext";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  Utensils,
+  Shield,
+} from "lucide-react";
+import { cardStyle, buttonPrimary, buttonGhost } from "../Styles";
 
-const sidebarStyles = {
-  sidebar: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: "280px",
-    background: "linear-gradient(180deg, #0f172a, #1e293b)",
-    borderRight: "1px solid rgba(148, 163, 184, 0.1)",
-    padding: "1.5rem",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.5rem",
-    boxSizing: "border-box",
-    zIndex: 20,
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    paddingBottom: "1rem",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.06)",
-  },
-  logo: {
-    width: "2.5rem",
-    height: "2.5rem",
-    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
-    borderRadius: "0.75rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.125rem",
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  brandText: {
-    fontSize: "1.25rem",
-    fontWeight: "700",
-    color: "#f8fafc",
-    margin: 0,
-  },
-  brandSub: {
-    fontSize: "0.875rem",
-    color: "#94a3b8",
-    margin: 0,
-  },
-  nav: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
-  },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    padding: "0.75rem 1rem",
-    borderRadius: "0.5rem",
-    textDecoration: "none",
-    color: "#94a3b8",
-    transition: "all 0.15s ease",
-    cursor: "pointer",
-    border: "none",
-    background: "none",
-    width: "100%",
-    fontSize: "0.875rem",
-    boxSizing: "border-box",
-  },
-  navItemActive: {
-    background: "rgba(139, 92, 246, 0.18)",
-    color: "#a78bfa",
-    borderLeft: "3px solid #8b5cf6",
-    paddingLeft: "0.75rem",
-  },
-  navItemDisabled: {
-    opacity: 0.6,
-    cursor: "not-allowed",
-  },
-  themeCard: {
-    background: "rgba(30, 41, 59, 0.55)",
-    backdropFilter: "blur(8px)",
-    borderRadius: "1rem",
-    border: "1px solid rgba(148, 163, 184, 0.06)",
-    padding: "1rem",
-    boxShadow: "0 6px 18px rgba(2,6,23,0.25)",
-  },
-};
-
+// Styles for the new design
 const settingsStyles = {
   container: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)",
+    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
     fontFamily: "system-ui, -apple-system, sans-serif",
+    padding: "2rem",
+    display: "flex",
+    justifyContent: "center",
   },
   wrapper: {
-    maxWidth: "48rem",
-    margin: "0 auto",
-    padding: "2rem 1rem",
+    width: "100%",
+    maxWidth: "800px",
   },
-  header: { 
+  header: {
     marginBottom: "2rem",
-    paddingBottom: "1rem",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.1)"
+    textAlign: "center",
   },
   title: {
-    fontSize: "2rem",
-    fontWeight: "bold",
-    color: "white",
+    fontSize: "2.5rem",
+    fontWeight: "800",
+    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+    backgroundClip: "text",
+    WebkitBackgroundClip: "text",
+    color: "transparent",
     margin: "0 0 0.5rem 0",
   },
-  subtitle: { 
-    color: "#d1d5db", 
+  subtitle: {
+    color: "#cbd5e1",
+    fontSize: "1.125rem",
     margin: 0,
-    fontSize: "1rem"
   },
-  settingsContainer: {
-    background: "rgba(31, 41, 55, 0.5)",
-    backdropFilter: "blur(10px)",
-    borderRadius: "1rem",
-    border: "1px solid rgba(148, 163, 184, 0.1)",
+  settingsCard: {
+    ...cardStyle,
+    padding: 0,
     overflow: "hidden",
   },
-  sectionHeader: {
+  section: {
     padding: "1.5rem",
-    background: "rgba(139, 92, 246, 0.1)",
     borderBottom: "1px solid rgba(148, 163, 184, 0.1)",
-    fontSize: "1.125rem",
-    fontWeight: "600",
-    color: "white",
-    margin: 0,
+  },
+  sectionHeader: {
     display: "flex",
     alignItems: "center",
-    gap: "0.5rem"
+    gap: "0.75rem",
+    margin: "0 0 1.5rem 0",
+    fontSize: "1.25rem",
+    fontWeight: "600",
+    color: "#f8fafc",
+  },
+  sectionIcon: {
+    color: "#8b5cf6",
   },
   settingItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "1.25rem 1.5rem",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.05)",
-    minHeight: "60px"
+    padding: "1rem 0",
   },
-  settingItemLast: {
-    borderBottom: "none"
-  },
-  settingInfo: { 
+  settingInfo: {
     flex: 1,
-    marginRight: "1rem"
   },
-  settingTitle: { 
-    color: "white", 
-    fontWeight: "500", 
+  settingTitle: {
+    color: "#f8fafc",
+    fontWeight: "500",
     margin: "0 0 0.25rem 0",
-    fontSize: "0.95rem"
+    fontSize: "1rem",
   },
   settingDesc: {
-    color: "#9ca3af",
-    fontSize: "0.825rem",
+    color: "#94a3b8",
+    fontSize: "0.875rem",
     margin: 0,
-    lineHeight: "1.4"
+    lineHeight: "1.4",
   },
   toggle: {
     position: "relative",
@@ -182,10 +90,14 @@ const settingsStyles = {
     borderRadius: "9999px",
     cursor: "pointer",
     border: "none",
-    transition: "background-color 0.2s",
+    transition: "all 0.2s",
   },
-  toggleActive: { background: "linear-gradient(45deg, #8b5cf6, #06b6d4)" },
-  toggleInactive: { background: "#4b5563" },
+  toggleActive: {
+    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+  },
+  toggleInactive: {
+    background: "#4b5563",
+  },
   toggleSwitch: {
     display: "inline-block",
     height: "1.25rem",
@@ -194,62 +106,77 @@ const settingsStyles = {
     background: "white",
     transition: "transform 0.2s",
     position: "absolute",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
   },
-  toggleSwitchActive: { transform: "translateX(1.25rem)" },
-  toggleSwitchInactive: { transform: "translateX(0.125rem)" },
+  toggleSwitchActive: {
+    transform: "translateX(1.25rem)",
+  },
+  toggleSwitchInactive: {
+    transform: "translateX(0.125rem)",
+  },
   select: {
     padding: "0.5rem 0.75rem",
     borderRadius: "0.5rem",
-    border: "1px solid #4b5563",
-    background: "#374151",
+    border: "1px solid rgba(148, 163, 184, 0.2)",
+    background: "rgba(30, 41, 59, 0.8)",
     color: "white",
-    minWidth: "140px"
+    minWidth: "160px",
+    fontSize: "0.875rem",
   },
   allergenGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-    gap: "0.5rem",
-    marginTop: "0.75rem",
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: "0.75rem",
+    marginTop: "1rem",
   },
   allergenButton: {
-    padding: "0.5rem 0.75rem",
+    padding: "0.625rem 0.75rem",
     borderRadius: "0.5rem",
     border: "1px solid",
     cursor: "pointer",
     transition: "all 0.2s",
-    fontSize: "0.8rem",
-    textAlign: "center"
+    fontSize: "0.875rem",
+    textAlign: "center",
+    fontWeight: "500",
   },
   allergenActive: {
     background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
-    borderColor: "#8b5cf6",
+    borderColor: "transparent",
     color: "white",
   },
   allergenInactive: {
-    background: "#374151",
-    borderColor: "#4b5563",
-    color: "#d1d5db",
+    background: "rgba(30, 41, 59, 0.6)",
+    borderColor: "rgba(148, 163, 184, 0.2)",
+    color: "#cbd5e1",
   },
-  actionButton: {
+  footer: {
+    padding: "1.5rem",
     display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    padding: "0.5rem 1rem",
-    borderRadius: "0.5rem",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    transition: "all 0.2s"
+    justifyContent: "center",
+    background: "rgba(139, 92, 246, 0.05)",
   },
-  dangerButton: {
-    background: "#dc2626",
-    color: "white",
+  selectedAllergens: {
+    marginTop: "1rem",
+    padding: "0.75rem",
+    background: "rgba(30, 41, 59, 0.4)",
+    borderRadius: "0.5rem",
+    border: "1px solid rgba(148, 163, 184, 0.1)",
+  },
+  selectedTitle: {
+    color: "#e2e8f0",
+    fontWeight: "600",
+    fontSize: "0.875rem",
+    margin: "0 0 0.5rem 0",
+  },
+  selectedList: {
+    color: "#94a3b8",
+    fontSize: "0.875rem",
+    margin: 0,
   },
 };
 
-export default function SettingsPageWithSidebar() {
+
+export default function SettingsPage() {
   const { prefs, updatePrefs } = usePreferences();
   const { logout } = useAuth();
 
@@ -270,13 +197,8 @@ export default function SettingsPageWithSidebar() {
   }, [prefs]);
 
   const allergenOptions = [
-    "Celiac",
-    "Diabetic", 
-    "Nut Allergy",
-    "Dairy Free",
-    "Shellfish",
-    "Soy",
-    "Egg",
+    "Celiac", "Diabetic", "Nut Allergy", "Dairy Free", 
+    "Shellfish", "Soy", "Egg"
   ];
 
   const dietOptions = [
@@ -288,25 +210,7 @@ export default function SettingsPageWithSidebar() {
     { value: "low_carb", label: "Low carb" },
   ];
 
-  // Theme toggle from the sidebar
-  const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    updatePrefs({ theme: next ? "dark" : "light" });
-  };
-
   // Handlers
-  const toggleInventory = () => {
-    const next = !inventory;
-    setInventory(next);
-    updatePrefs({ user_inventory: next });
-  };
-
-  const toggleShoppingList = () => {
-    const next = !shoppingList;
-    setShoppingList(next);
-    updatePrefs({ shopping_list: next });
-  };
 
   const handleAllergenToggle = (a) => {
     let next;
@@ -325,229 +229,88 @@ export default function SettingsPageWithSidebar() {
     logout();
   };
 
-  // Components
-  const ToggleSwitch = ({ enabled, onChange }) => (
-    <button
-      onClick={onChange}
-      aria-pressed={enabled}
-      style={{
-        ...settingsStyles.toggle,
-        ...(enabled ? settingsStyles.toggleActive : settingsStyles.toggleInactive),
-      }}
-    >
-      <span
-        style={{
-          ...settingsStyles.toggleSwitch,
-          ...(enabled ? settingsStyles.toggleSwitchActive : settingsStyles.toggleSwitchInactive),
-        }}
-      />
-    </button>
-  );
-
-  const navLinkStyle = ({ isActive }) => ({
-    ...sidebarStyles.navItem,
-    ...(isActive ? sidebarStyles.navItemActive : {}),
-  });
-
-  const themeLabel = prefs?.theme === "dark" ? "Dark" : "Light";
-
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar */}
-      <aside style={sidebarStyles.sidebar}>
-        <div style={sidebarStyles.brand}>
-          <div style={sidebarStyles.logo}>MP</div>
-          <div>
-            <div style={sidebarStyles.brandText}>Meal Planner</div>
-            <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
-          </div>
+    <div style={settingsStyles.container}>
+      <div style={settingsStyles.wrapper}>
+        <div style={settingsStyles.header}>
+          <h1 style={settingsStyles.title}>Settings</h1>
+          <p style={settingsStyles.subtitle}>Customize your meal planning experience</p>
         </div>
 
-        <nav style={sidebarStyles.nav}>
-          <NavLink to="/home" style={navLinkStyle}>
-            <Calendar style={{ width: "1rem", height: "1rem" }} />
-            Weekly Planner
-          </NavLink>
-
-          <button style={{ ...sidebarStyles.navItem, ...sidebarStyles.navItemDisabled }} disabled>
-            <ShoppingCart style={{ width: "1rem", height: "1rem" }} />
-            Groceries
-          </button>
-
-          <NavLink to="/recipe" style={navLinkStyle}>
-            <Utensils style={{ width: "1rem", height: "1rem" }} />
-            Recipes
-          </NavLink>
-
-          <NavLink to="/settings" style={navLinkStyle}>
-            <Settings style={{ width: "1rem", height: "1rem" }} />
-            Settings
-          </NavLink>
-        </nav>
-
-        {/* Theme info card */}
-        <div style={sidebarStyles.themeCard}>
-          <div
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              color: "#f8fafc",
-              margin: "0 0 0.5rem 0",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <Sparkles style={{ width: "1rem", height: "1rem", color: "#a78bfa" }} />
-            Current Theme: {themeLabel}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: "1.4" }}>
-            Toggle theme directly below or change in Settings.
-          </div>
-        </div>
-
-        {/* Dark mode switch */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.5rem",
-            border: "1px solid rgba(148, 163, 184, 0.12)",
-            background: "rgba(30, 41, 59, 0.6)",
-            color: "#f8fafc",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-          aria-label="Toggle theme"
-          title={`Switch to ${prefs?.theme === "dark" ? "light" : "dark"} mode`}
-        >
-          {prefs?.theme === "dark" ? (
-            <Sun style={{ width: "1rem", height: "1rem" }} />
-          ) : (
-            <Moon style={{ width: "1rem", height: "1rem" }} />
-          )}
-          Toggle {prefs?.theme === "dark" ? "Light" : "Dark"} Mode
-        </button>
-      </aside>
-
-      {/* Main Content */}
-      <main style={{ flex: 1, marginLeft: "280px", overflow: "auto", minHeight: "100vh" }}>
-        <div style={settingsStyles.container}>
-          <div style={settingsStyles.wrapper}>
-            <div style={settingsStyles.header}>
-              <h1 style={settingsStyles.title}>Settings</h1>
-              <p style={settingsStyles.subtitle}>Manage your preferences and account settings</p>
+        <div style={settingsStyles.settingsCard}>
+          {/* Dietary Preferences Section */}
+          <div style={settingsStyles.section}>
+            <h2 style={settingsStyles.sectionHeader}>
+              <Utensils style={settingsStyles.sectionIcon} size={20} />
+              Dietary Preferences
+            </h2>
+            
+            <div style={settingsStyles.settingItem}>
+              <div style={settingsStyles.settingInfo}>
+                <h3 style={settingsStyles.settingTitle}>Diet Type</h3>
+                <p style={settingsStyles.settingDesc}>
+                  Select your preferred diet type
+                </p>
+              </div>
+              <select
+                value={dietType}
+                onChange={handleDietChange}
+                style={settingsStyles.select}
+              >
+                {dietOptions.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div style={settingsStyles.settingsContainer}>
-              {/* General Settings Section */}
-              <h2 style={settingsStyles.sectionHeader}>
-                <Settings style={{ width: "1.25rem", height: "1.25rem" }} />
-                General Settings
-              </h2>
+            <div style={{ marginTop: "1.5rem" }}>
+              <h3 style={settingsStyles.settingTitle}>Allergens & Restrictions</h3>
+              <p style={settingsStyles.settingDesc}>
+                Select any allergens or dietary restrictions
+              </p>
+              
+              <div style={settingsStyles.allergenGrid}>
+                {allergenOptions.map((a) => {
+                  const active = allergens.includes(a);
+                  return (
+                    <button
+                      key={a}
+                      onClick={() => handleAllergenToggle(a)}
+                      style={{
+                        ...settingsStyles.allergenButton,
+                        ...(active ? settingsStyles.allergenActive : settingsStyles.allergenInactive),
+                      }}
+                      aria-pressed={active}
+                    >
+                      {a}
+                    </button>
+                  );
+                })}
+              </div>
 
-              <div style={settingsStyles.settingItem}>
-                <div style={settingsStyles.settingInfo}>
-                  <h3 style={settingsStyles.settingTitle}>Dark Mode</h3>
-                  <p style={settingsStyles.settingDesc}>Toggle between light and dark theme</p>
+              {allergens.length > 0 && (
+                <div style={settingsStyles.selectedAllergens}>
+                  <div style={settingsStyles.selectedTitle}>Selected restrictions:</div>
+                  <p style={settingsStyles.selectedList}>{allergens.join(", ")}</p>
                 </div>
-                <ToggleSwitch enabled={darkMode} onChange={toggleTheme} />
-              </div>
-
-              <div style={settingsStyles.settingItem}>
-                <div style={settingsStyles.settingInfo}>
-                  <h3 style={settingsStyles.settingTitle}>Inventory Tracking</h3>
-                  <p style={settingsStyles.settingDesc}>Keep track of your ingredients and supplies</p>
-                </div>
-                <ToggleSwitch enabled={inventory} onChange={toggleInventory} />
-              </div>
-
-              <div style={settingsStyles.settingItem}>
-                <div style={settingsStyles.settingInfo}>
-                  <h3 style={settingsStyles.settingTitle}>Shopping List</h3>
-                  <p style={settingsStyles.settingDesc}>Generate shopping lists from your meal plans</p>
-                </div>
-                <ToggleSwitch enabled={shoppingList} onChange={toggleShoppingList} />
-              </div>
-
-              {/* Dietary Preferences Section */}
-              <h2 style={settingsStyles.sectionHeader}>
-                <Utensils style={{ width: "1.25rem", height: "1.25rem" }} />
-                Dietary Preferences
-              </h2>
-
-              <div style={settingsStyles.settingItem}>
-                <div style={settingsStyles.settingInfo}>
-                  <h3 style={settingsStyles.settingTitle}>Diet Type</h3>
-                  <p style={settingsStyles.settingDesc}>Select your preferred diet type</p>
-                </div>
-                <select
-                  value={dietType}
-                  onChange={handleDietChange}
-                  style={settingsStyles.select}
-                >
-                  {dietOptions.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{...settingsStyles.settingItem, ...settingsStyles.settingItemLast, alignItems: 'flex-start'}}>
-                <div style={settingsStyles.settingInfo}>
-                  <h3 style={settingsStyles.settingTitle}>Allergens & Health Conditions</h3>
-                  <p style={settingsStyles.settingDesc}>Select any allergens or dietary restrictions</p>
-                  
-                  <div style={settingsStyles.allergenGrid}>
-                    {allergenOptions.map((a) => {
-                      const active = allergens.includes(a);
-                      return (
-                        <button
-                          key={a}
-                          onClick={() => handleAllergenToggle(a)}
-                          style={{
-                            ...settingsStyles.allergenButton,
-                            ...(active ? settingsStyles.allergenActive : settingsStyles.allergenInactive),
-                          }}
-                          aria-pressed={active}
-                        >
-                          {a}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {allergens.length > 0 && (
-                    <div style={{ marginTop: "0.75rem", fontSize: "0.8rem" }}>
-                      <div style={{ color: "#d1d5db", fontWeight: "600" }}>Selected:</div>
-                      <div style={{ color: "#9ca3af" }}>{allergens.join(", ")}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Logout Section */}
-              <div style={{
-                padding: "1.5rem",
-                borderTop: "1px solid rgba(148, 163, 184, 0.1)",
-                background: "rgba(139, 92, 246, 0.05)"
-              }}>
-                <button onClick={handleLogout} style={{...settingsStyles.actionButton, ...settingsStyles.dangerButton}}>
-                  <Shield style={{ width: "1.25rem", height: "1.25rem" }} />
-                  Logout
-                </button>
-              </div>
+              )}
             </div>
           </div>
+
+          {/* Logout Section */}
+          <div style={settingsStyles.footer}>
+            <button 
+              onClick={handleLogout} 
+              style={{ ...buttonGhost, ...settingsStyles.dangerButton }}
+            >
+              <Shield size={18} />
+              Logout
+            </button>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

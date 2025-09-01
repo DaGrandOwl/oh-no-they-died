@@ -1,12 +1,9 @@
 import { Outlet, NavLink } from "react-router-dom";
 import {
-  Calendar,
   ShoppingCart,
   Utensils,
   Settings,
-  Sparkles,
-  Moon,
-  Sun,
+  Home,
 } from "lucide-react";
 import { usePreferences } from "../contexts/PrefContext";
 
@@ -100,17 +97,10 @@ const sidebarStyles = {
 const Layout = () => {
   const { prefs, updatePrefs } = usePreferences();
 
-  const toggleTheme = () => {
-    const current = prefs?.theme === "dark" ? "dark" : "light";
-    updatePrefs({ theme: current === "dark" ? "light" : "dark" });
-  };
-
   const navLinkStyle = ({ isActive }) => ({
     ...sidebarStyles.navItem,
     ...(isActive ? sidebarStyles.navItemActive : {}),
   });
-
-  const themeLabel = prefs?.theme === "dark" ? "Dark" : "Light";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -123,17 +113,17 @@ const Layout = () => {
             <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
           </div>
         </div>
-
+        //Replace home with dashboard
         <nav style={sidebarStyles.nav}>
           <NavLink to="/home" style={navLinkStyle}>
-            <Calendar style={{ width: "1rem", height: "1rem" }} />
-            Weekly Planner
+            <Home style={{ width: "1rem", height: "1rem" }} />
+            Home
           </NavLink>
 
-          <button style={{ ...sidebarStyles.navItem, ...sidebarStyles.navItemDisabled }} disabled>
+          <NavLink to="/inventory" style={navLinkStyle}>
             <ShoppingCart style={{ width: "1rem", height: "1rem" }} />
-            Groceries
-          </button>
+            Inventory
+          </NavLink>
 
           <NavLink to="/recipe" style={navLinkStyle}>
             <Utensils style={{ width: "1rem", height: "1rem" }} />
@@ -145,56 +135,6 @@ const Layout = () => {
             Settings
           </NavLink>
         </nav>
-
-        {/* Theme info card */}
-        <div style={sidebarStyles.themeCard}>
-          <div
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              color: "#f8fafc",
-              margin: "0 0 0.5rem 0",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <Sparkles style={{ width: "1rem", height: "1rem", color: "#a78bfa" }} />
-            Current Theme: {themeLabel}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: "1.4" }}>
-            Toggle theme directly below or change in Settings.
-          </div>
-        </div>
-
-        {/* Dark mode switch - kept at bottom */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.5rem",
-            border: "1px solid rgba(148, 163, 184, 0.12)",
-            background: "rgba(30, 41, 59, 0.6)",
-            color: "#f8fafc",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-          aria-label="Toggle theme"
-          title={`Switch to ${prefs?.theme === "dark" ? "light" : "dark"} mode`}
-        >
-          {prefs?.theme === "dark" ? (
-            <Sun style={{ width: "1rem", height: "1rem" }} />
-          ) : (
-            <Moon style={{ width: "1rem", height: "1rem" }} />
-          )}
-          Toggle {prefs?.theme === "dark" ? "Light" : "Dark"} Mode
-        </button>
       </aside>
 
       {/* Main Content */}
