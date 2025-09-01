@@ -1,6 +1,18 @@
 import { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { NavLink } from "react-router-dom";
+import {
+  Calendar,
+  ShoppingCart,
+  Utensils,
+  Settings,
+  Sparkles,
+  Moon,
+  Sun,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import WeekPlanner from "../components/WeekPlanner";
 import { usePreferences } from "../contexts/PrefContext";
 import { usePlan } from "../contexts/PlanContext";
@@ -39,10 +51,121 @@ function nextDateForWeekday(weekday) {
   return next.toISOString().slice(0,10);
 }
 
+// Sidebar styles
+const sidebarStyles = {
+  sidebar: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "280px",
+    background: "linear-gradient(180deg, #0f172a, #1e293b)",
+    borderRight: "1px solid rgba(148, 163, 184, 0.1)",
+    padding: "1.5rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.5rem",
+    boxSizing: "border-box",
+    zIndex: 20,
+    transition: "transform 0.3s ease",
+  },
+  sidebarMinimized: {
+    transform: "translateX(-265px)", // Leave 15px visible to show the button
+    width: "280px", // Keep the same width
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    paddingBottom: "1rem",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.06)",
+  },
+  logo: {
+    width: "2.5rem",
+    height: "2.5rem",
+    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+    borderRadius: "0.75rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "1.125rem",
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  brandText: {
+    fontSize: "1.25rem",
+    fontWeight: "700",
+    color: "#f8fafc",
+    margin: 0,
+  },
+  brandSub: {
+    fontSize: "0.875rem",
+    color: "#94a3b8",
+    margin: 0,
+  },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+  navItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    padding: "0.75rem 1rem",
+    borderRadius: "0.5rem",
+    textDecoration: "none",
+    color: "#94a3b8",
+    transition: "all 0.15s ease",
+    cursor: "pointer",
+    border: "none",
+    background: "none",
+    width: "100%",
+    fontSize: "0.875rem",
+    boxSizing: "border-box",
+  },
+  navItemActive: {
+    background: "rgba(139, 92, 246, 0.18)",
+    color: "#a78bfa",
+    borderLeft: "3px solid #8b5cf6",
+    paddingLeft: "0.75rem",
+  },
+  navItemDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+  themeCard: {
+    background: "rgba(30, 41, 59, 0.55)",
+    backdropFilter: "blur(8px)",
+    borderRadius: "1rem",
+    border: "1px solid rgba(148, 163, 184, 0.06)",
+    padding: "1rem",
+    boxShadow: "0 6px 18px rgba(2,6,23,0.25)",
+  },
+  minimizeButton: {
+    position: "absolute",
+    top: "1rem",
+    right: "-15px",
+    width: "30px",
+    height: "30px",
+    borderRadius: "50%",
+    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
+    border: "none",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+    zIndex: 25,
+  },
+};
+
 export default function Recommendations() {
-  const { prefs } = usePreferences();
+  const { prefs, updatePrefs } = usePreferences();
   const { addMeal, plan, removeMeal } = usePlan();
   const { token } = useAuth();
+  const [sidebarMinimized, setSidebarMinimized] = useState(false);
 
   // Filters: no servings filter here
   const [filters, setFilters] = useState({
@@ -75,6 +198,11 @@ export default function Recommendations() {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleTheme = () => {
+    const current = prefs?.theme === "dark" ? "dark" : "light";
+    updatePrefs({ theme: current === "dark" ? "light" : "dark" });
   };
 
   async function searchRecipes() {
@@ -210,6 +338,13 @@ export default function Recommendations() {
     setResults([]);
   };
 
+  const navLinkStyle = ({ isActive }) => ({
+    ...sidebarStyles.navItem,
+    ...(isActive ? sidebarStyles.navItemActive : {}),
+  });
+
+  const themeLabel = prefs?.theme === "dark" ? "Dark" : "Light";
+
   // Styles matching the reference page
   const cardStyle = {
     background: 'rgba(30, 41, 59, 0.6)',
@@ -265,323 +400,455 @@ export default function Recommendations() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: '#f8fafc',
-        padding: '2rem'
-      }}>
+      <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
         <ToastContainer position="top-right" />
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          
-          {/* Page Header */}
-          <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h1 style={{ 
-                  fontSize: '2.5rem', 
-                  fontWeight: 'bold', 
-                  margin: '0 0 0.5rem 0',
-                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent'
-                }}>
-                  Recipe Recommendations
-                </h1>
-                <p style={{ 
-                  fontSize: '1.125rem', 
-                  color: '#94a3b8', 
-                  margin: '0',
-                  fontWeight: 'normal'
-                }}>
-                  Discover and plan your next meal
-                </p>
+        
+        {/* Sidebar Overlay */}
+        {!sidebarMinimized && (
+          <div 
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.4)",
+              zIndex: 15,
+            }}
+            onClick={() => setSidebarMinimized(true)}
+          />
+        )}
+
+        {/* Sidebar */}
+        <aside style={{
+          ...sidebarStyles.sidebar,
+          ...(sidebarMinimized ? sidebarStyles.sidebarMinimized : {}),
+        }}>
+          <button
+            onClick={() => setSidebarMinimized(!sidebarMinimized)}
+            style={{
+              ...sidebarStyles.minimizeButton,
+              right: sidebarMinimized ? "-12px" : "-15px"
+            }}
+            aria-label={sidebarMinimized ? "Expand sidebar" : "Minimize sidebar"}
+          >
+            {sidebarMinimized ? (
+              <ChevronRight style={{ width: "16px", height: "16px" }} />
+            ) : (
+              <ChevronLeft style={{ width: "16px", height: "16px" }} />
+            )}
+          </button>
+
+          {!sidebarMinimized && (
+            <>
+              <div style={sidebarStyles.brand}>
+                <div style={sidebarStyles.logo}>MP</div>
+                <div>
+                  <div style={sidebarStyles.brandText}>Meal Planner</div>
+                  <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
+                </div>
               </div>
-              {highlightedRecipe && (
-                <button 
-                  onClick={() => clearHighlight()} 
+
+              <nav style={sidebarStyles.nav}>
+                <NavLink to="/home" style={navLinkStyle}>
+                  <Calendar style={{ width: "1rem", height: "1rem" }} />
+                  Weekly Planner
+                </NavLink>
+
+                <button style={{ ...sidebarStyles.navItem, ...sidebarStyles.navItemDisabled }} disabled>
+                  <ShoppingCart style={{ width: "1rem", height: "1rem" }} />
+                  Groceries
+                </button>
+
+                <NavLink to="/recipe" style={navLinkStyle}>
+                  <Utensils style={{ width: "1rem", height: "1rem" }} />
+                  Recipes
+                </NavLink>
+
+                <NavLink to="/settings" style={navLinkStyle}>
+                  <Settings style={{ width: "1rem", height: "1rem" }} />
+                  Settings
+                </NavLink>
+              </nav>
+
+              {/* Theme info card */}
+              <div style={sidebarStyles.themeCard}>
+                <div
                   style={{
-                    ...buttonSecondary,
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    color: '#f87171',
-                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#f8fafc",
+                    margin: "0 0 0.5rem 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
                   }}
                 >
-                  Cancel Selection
-                </button>
-              )}
-            </div>
-          </div>
+                  <Sparkles style={{ width: "1rem", height: "1rem", color: "#a78bfa" }} />
+                  Current Theme: {themeLabel}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: "1.4" }}>
+                  Toggle theme directly below or change in Settings.
+                </div>
+              </div>
 
-          {/* Search Filters */}
-          <div style={cardStyle}>
-            <h3 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              margin: '0 0 1.5rem 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <span style={{ 
-                background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-                borderRadius: '0.5rem',
-                padding: '0.5rem',
-                fontSize: '1rem'
-              }}>
-                🔍
-              </span>
-              Search Filters
-            </h3>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '1rem', 
-              marginBottom: '1.5rem' 
-            }}>
-              <input 
-                placeholder="Cuisine" 
-                value={filters.cuisine} 
-                onChange={e => handleFilterChange("cuisine", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <select 
-                value={filters.mealType} 
-                onChange={e => handleFilterChange("mealType", e.target.value)}
-                style={selectStyle}
+              {/* Dark mode switch - kept at bottom */}
+              <button
+                onClick={toggleTheme}
+                style={{
+                  marginTop: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "0.5rem",
+                  border: "1px solid rgba(148, 163, 184, 0.12)",
+                  background: "rgba(30, 41, 59, 0.6)",
+                  color: "#f8fafc",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+                aria-label="Toggle theme"
+                title={`Switch to ${prefs?.theme === "dark" ? "light" : "dark"} mode`}
               >
-                <option value="">Any meal type</option>
-                <option value="Breakfast">Breakfast</option>
-                <option value="Lunch">Lunch</option>
-                <option value="Dinner">Dinner</option>
-                <option value="Snacks">Snacks</option>
-              </select>
+                {prefs?.theme === "dark" ? (
+                  <Sun style={{ width: "1rem", height: "1rem" }} />
+                ) : (
+                  <Moon style={{ width: "1rem", height: "1rem" }} />
+                )}
+                Toggle {prefs?.theme === "dark" ? "Light" : "Dark"} Mode
+              </button>
+            </>
+          )}
+        </aside>
 
-              <input 
-                placeholder="Diet type (keto/vegan...)" 
-                value={filters.dietType} 
-                onChange={e => handleFilterChange("dietType", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <input 
-                type="number" 
-                placeholder="Max Calories" 
-                value={filters.maxCalories} 
-                onChange={e => handleFilterChange("maxCalories", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <input 
-                type="number" 
-                placeholder="Min Carbs (g)" 
-                value={filters.minCarbs} 
-                onChange={e => handleFilterChange("minCarbs", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <input 
-                type="number" 
-                placeholder="Min Protein (g)" 
-                value={filters.minProtein} 
-                onChange={e => handleFilterChange("minProtein", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <input 
-                type="number" 
-                placeholder="Min Fat (g)" 
-                value={filters.minFat} 
-                onChange={e => handleFilterChange("minFat", e.target.value)} 
-                style={inputStyle}
-              />
-
-              <div>
-                <label style={{ 
-                  fontSize: '0.75rem', 
-                  color: '#94a3b8', 
-                  marginBottom: '0.5rem',
-                  display: 'block',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Max Cost
-                </label>
-                <select
-                  value={filters.maxCost ?? 3}
-                  onChange={(e) => handleFilterChange("maxCost", Number(e.target.value))}
-                  style={selectStyle}
-                >
-                  <option value={3}>$$ (Premium)</option>
-                  <option value={2}>$ (Moderate)</option>
-                  <option value={1}>$ (Budget)</option>
-                </select>
+        {/* Main Content */}
+        <main style={{
+          flex: 1,
+          marginLeft: sidebarMinimized ? "15px" : "0",
+          paddingLeft: sidebarMinimized ? "0" : "280px",
+          transition: "margin-left 0.3s ease, padding-left 0.3s ease",
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          color: '#f8fafc',
+          padding: '2rem'
+        }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            
+            {/* Page Header */}
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h1 style={{ 
+                    fontSize: '2.5rem', 
+                    fontWeight: 'bold', 
+                    margin: '0 0 0.5rem 0',
+                    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent'
+                  }}>
+                    Recipe Recommendations
+                  </h1>
+                  <p style={{ 
+                    fontSize: '1.125rem', 
+                    color: '#94a3b8', 
+                    margin: '0',
+                    fontWeight: 'normal'
+                  }}>
+                    Discover and plan your next meal
+                  </p>
+                </div>
+                {highlightedRecipe && (
+                  <button 
+                    onClick={() => clearHighlight()} 
+                    style={{
+                      ...buttonSecondary,
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: '#f87171',
+                      border: '1px solid rgba(239, 68, 68, 0.2)'
+                    }}
+                  >
+                    Cancel Selection
+                  </button>
+                )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <label style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                color: '#e2e8f0',
-                fontSize: '0.875rem',
-                cursor: 'pointer'
-              }}>
-                <input 
-                  type="checkbox" 
-                  checked={filters.inventoryMatch} 
-                  onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} 
-                  style={{ accentColor: '#8b5cf6' }}
-                />
-                Match my inventory
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={searchRecipes} style={buttonPrimary}>
-                {loading ? "Searching..." : "🔍 Search Recipes"}
-              </button>
-              <button onClick={clearAll} style={buttonSecondary}>
-                🗑️ Clear Filters
-              </button>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-            
-            {/* Results Section */}
-            <div style={cardStyle}>
-              <h2 style={{ 
-                fontSize: '1.5rem', 
-                fontWeight: '600', 
-                margin: '0 0 1.5rem 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <span style={{ 
-                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem',
-                  fontSize: '1rem'
-                }}>
-                  🍽️
-                </span>
-                Recipe Results
-                {results.length > 0 && (
-                  <span style={{ 
-                    fontSize: '0.875rem',
-                    color: '#94a3b8',
-                    fontWeight: 'normal',
-                    marginLeft: '0.5rem'
+            {/* Main Content Grid - Filters and Results side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '1.5rem' }}>
+              
+              {/* Left Column - Filters and Results */}
+              <div>
+                {/* Search Filters */}
+                <div style={cardStyle}>
+                  <h3 style={{ 
+                    fontSize: '1.25rem', 
+                    fontWeight: '600', 
+                    margin: '0 0 1.5rem 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}>
-                    ({results.length} found)
-                  </span>
-                )}
-              </h2>
+                    <span style={{ 
+                      background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                      borderRadius: '0.5rem',
+                      padding: '0.5rem',
+                      fontSize: '1rem'
+                    }}>
+                      🔍
+                    </span>
+                    Search Filters
+                  </h3>
+                  
+                  {/* Row 1: Carbs, Protein, Fats */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                    gap: '1rem', 
+                    marginBottom: '1rem' 
+                  }}>
+                    <input 
+                      type="number" 
+                      placeholder="Min Carbs (g)" 
+                      value={filters.minCarbs} 
+                      onChange={e => handleFilterChange("minCarbs", e.target.value)} 
+                      style={inputStyle}
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Min Protein (g)" 
+                      value={filters.minProtein} 
+                      onChange={e => handleFilterChange("minProtein", e.target.value)} 
+                      style={inputStyle}
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Min Fat (g)" 
+                      value={filters.minFat} 
+                      onChange={e => handleFilterChange("minFat", e.target.value)} 
+                      style={inputStyle}
+                    />
+                  </div>
 
-              {results.length === 0 ? (
+                  {/* Row 2: Calories, Cost, Pantry Match */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr 1fr', 
+                    gap: '1rem', 
+                    marginBottom: '1rem' 
+                  }}>
+                    <input 
+                      type="number" 
+                      placeholder="Max Calories" 
+                      value={filters.maxCalories} 
+                      onChange={e => handleFilterChange("maxCalories", e.target.value)} 
+                      style={inputStyle}
+                    />
+                    <div>
+                      <select
+                        value={filters.maxCost ?? 3}
+                        onChange={(e) => handleFilterChange("maxCost", Number(e.target.value))}
+                        style={selectStyle}
+                      >
+                        <option value={3}>$$$ (Premium)</option>
+                        <option value={2}>$$ (Moderate)</option>
+                        <option value={1}>$ (Budget)</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        color: '#e2e8f0',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer'
+                      }}>
+                        <input 
+                          type="checkbox" 
+                          checked={filters.inventoryMatch} 
+                          onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} 
+                          style={{ accentColor: '#8b5cf6' }}
+                        />
+                        Match my inventory
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Cuisine, Meal Type, Diet */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                    gap: '1rem', 
+                    marginBottom: '1.5rem' 
+                  }}>
+                    <input 
+                      placeholder="Cuisine" 
+                      value={filters.cuisine} 
+                      onChange={e => handleFilterChange("cuisine", e.target.value)} 
+                      style={inputStyle}
+                    />
+                    <select 
+                      value={filters.mealType} 
+                      onChange={e => handleFilterChange("mealType", e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="">Any meal type</option>
+                      <option value="Breakfast">Breakfast</option>
+                      <option value="Lunch">Lunch</option>
+                      <option value="Dinner">Dinner</option>
+                      <option value="Snacks">Snacks</option>
+                    </select>
+                    <input 
+                      placeholder="Diet type (keto/vegan...)" 
+                      value={filters.dietType} 
+                      onChange={e => handleFilterChange("dietType", e.target.value)} 
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button onClick={searchRecipes} style={buttonPrimary}>
+                      {loading ? "Searching..." : "🔍 Search Recipes"}
+                    </button>
+                    <button onClick={clearAll} style={buttonSecondary}>
+                      🗑️ Clear Filters
+                    </button>
+                  </div>
+                </div>
+
+                {/* Results Section */}
+                <div style={cardStyle}>
+                  <h2 style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '600', 
+                    margin: '0 0 1.5rem 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ 
+                      background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                      borderRadius: '0.5rem',
+                      padding: '0.5rem',
+                      fontSize: '1rem'
+                    }}>
+                      🍽️
+                    </span>
+                    Recipe Results
+                    {results.length > 0 && (
+                      <span style={{ 
+                        fontSize: '0.875rem',
+                        color: '#94a3b8',
+                        fontWeight: 'normal',
+                        marginLeft: '0.5rem'
+                      }}>
+                        ({results.length} found)
+                      </span>
+                    )}
+                  </h2>
+
+                  {results.length === 0 ? (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '3rem 1rem',
+                      color: '#94a3b8',
+                      background: 'rgba(139, 92, 246, 0.05)',
+                      borderRadius: '0.75rem',
+                      border: '1px solid rgba(148, 163, 184, 0.1)'
+                    }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                      <div style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                        No recipes found
+                      </div>
+                      <div style={{ fontSize: '0.875rem' }}>
+                        Try adjusting your search filters or search for different criteria
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {results.map(r => (
+                        <div key={r.id}>
+                          <MealCard
+                            recipe={r}
+                            compact={false}
+                            hideImage={false}
+                            darkTheme={true}
+                            onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)}
+                            onClearHighlight={() => clearHighlight()}
+                          />
+                          {typeof r.match_pct === "number" && (
+                            <div style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#a78bfa', 
+                              marginTop: '0.5rem',
+                              padding: '0.25rem 0.5rem',
+                              background: 'rgba(139, 92, 246, 0.1)',
+                              borderRadius: '0.25rem',
+                              display: 'inline-block'
+                            }}>
+                              📦 Inventory match: {Math.round(r.match_pct)}%
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column - Weekly Planner */}
+              <div style={cardStyle}>
+                <h3 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '600', 
+                  margin: '0 0 1.5rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ 
+                    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+                    borderRadius: '0.5rem',
+                    padding: '0.5rem',
+                    fontSize: '1rem'
+                  }}>
+                    📅
+                  </span>
+                  Weekly Planner
+                </h3>
+                
+                <WeekPlanner
+                  plan={plan}
+                  highlightedRecipe={highlightedRecipe}
+                  onSlotClick={handleSlotClick}
+                  onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
+                  onRemove={({ key, index, serverId }) => removeMeal({ key, index, serverId })}
+                  dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
+                  plannerMode={true}
+                  minimized={true}
+                  darkTheme={true}
+                />
+                
                 <div style={{ 
-                  textAlign: 'center', 
-                  padding: '3rem 1rem',
+                  marginTop: '1rem', 
+                  fontSize: '0.75rem', 
                   color: '#94a3b8',
+                  padding: '0.75rem',
                   background: 'rgba(139, 92, 246, 0.05)',
-                  borderRadius: '0.75rem',
+                  borderRadius: '0.5rem',
                   border: '1px solid rgba(148, 163, 184, 0.1)'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                  <div style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                    No recipes found
-                  </div>
-                  <div style={{ fontSize: '0.875rem' }}>
-                    Try adjusting your search filters or search for different criteria
-                  </div>
+                  💡 <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {results.map(r => (
-                    <div key={r.id}>
-                      <MealCard
-                        recipe={r}
-                        compact={false}
-                        hideImage={false}
-                        darkTheme={true}
-                        onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)}
-                        onClearHighlight={() => clearHighlight()}
-                      />
-                      {typeof r.match_pct === "number" && (
-                        <div style={{ 
-                          fontSize: '0.75rem', 
-                          color: '#a78bfa', 
-                          marginTop: '0.5rem',
-                          padding: '0.25rem 0.5rem',
-                          background: 'rgba(139, 92, 246, 0.1)',
-                          borderRadius: '0.25rem',
-                          display: 'inline-block'
-                        }}>
-                          📦 Inventory match: {Math.round(r.match_pct)}%
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Weekly Planner Sidebar */}
-            <div style={cardStyle}>
-              <h3 style={{ 
-                fontSize: '1.25rem', 
-                fontWeight: '600', 
-                margin: '0 0 1.5rem 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <span style={{ 
-                  background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem',
-                  fontSize: '1rem'
-                }}>
-                  📅
-                </span>
-                Weekly Planner
-              </h3>
-              
-              <WeekPlanner
-                plan={plan}
-                highlightedRecipe={highlightedRecipe}
-                onSlotClick={handleSlotClick}
-                onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
-                onRemove={({ key, index, serverId }) => removeMeal({ key, index, serverId })}
-                dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
-                // NEW: Pass props for minimized planner mode
-                plannerMode={true}
-                minimized={true}
-                darkTheme={true}
-              />
-              
-              <div style={{ 
-                marginTop: '1rem', 
-                fontSize: '0.75rem', 
-                color: '#94a3b8',
-                padding: '0.75rem',
-                background: 'rgba(139, 92, 246, 0.05)',
-                borderRadius: '0.5rem',
-                border: '1px solid rgba(148, 163, 184, 0.1)'
-              }}>
-                💡 <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </DndProvider>
   );

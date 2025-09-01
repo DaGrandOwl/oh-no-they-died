@@ -1,14 +1,176 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
+import { Search, X, Utensils, Zap, Wheat, Dumbbell, Droplet } from "lucide-react";
+import { cardStyle, buttonIcon, inputStyle } from "../Styles";
 import "react-toastify/dist/ReactToastify.css";
 
-const thStyle = {
-  textAlign: "left",
-  padding: "8px 12px",
-  fontWeight: 700,
-  color: "#374151",
-  borderBottom: "2px solid #eef2f6"
+
+const styles = {
+  container: {
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+    minHeight: '100vh',
+    padding: '2rem',
+    color: '#f8fafc'
+  },
+  header: {
+    marginBottom: '2rem'
+  },
+  title: {
+    fontSize: '2.5rem',
+    fontWeight: '700',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    marginBottom: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
+  },
+  subtitle: {
+    color: '#94a3b8',
+    fontSize: '1.125rem',
+    margin: 0
+  },
+  searchCard: {
+    ...cardStyle,
+    padding: '1.5rem',
+    marginBottom: '2rem'
+  },
+  searchContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    marginBottom: '1rem'
+  },
+  searchInputContainer: {
+    position: 'relative',
+    flex: 1,
+    maxWidth: '500px'
+  },
+  searchInput: {
+    ...inputStyle,
+    width: '100%',
+    paddingLeft: '3rem',
+    fontSize: '1rem',
+    borderRadius: '0.75rem',
+    boxSizing: 'border-box'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '1rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#94a3b8',
+    pointerEvents: 'none'
+  },
+  clearButton: {
+    ...buttonIcon,
+    padding: '1rem 1.5rem',
+    borderRadius: '0.75rem',
+    fontSize: '0.875rem',
+    fontWeight: '500'
+  },
+  resultInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    color: '#94a3b8',
+    fontSize: '0.875rem'
+  },
+  tableContainer: {
+    ...cardStyle,
+    overflow: 'hidden'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse'
+  },
+  tableHeader: {
+    background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.1))',
+    borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  categoryHeader: {
+    padding: '1.5rem',
+    fontSize: '1.125rem',
+    fontWeight: '600',
+    color: '#a78bfa',
+    textAlign: 'center',
+    borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  columnHeader: {
+    padding: '1rem',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: '#e2e8f0',
+    textAlign: 'left',
+    borderRight: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  row: {
+    borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  cell: {
+    padding: '1rem',
+    borderRight: '1px solid rgba(148, 163, 184, 0.05)',
+    color: '#e2e8f0',
+    verticalAlign: 'middle'
+  },
+  imageCell: {
+    padding: '0.75rem',
+    width: '120px'
+  },
+  recipeImage: {
+    width: '100px',
+    height: '70px',
+    objectFit: 'cover',
+    borderRadius: '0.5rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  noImage: {
+    width: '100px',
+    height: '70px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: '0.5rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)',
+    color: '#a78bfa'
+  },
+  recipeName: {
+    fontWeight: '500',
+    fontSize: '1rem'
+  },
+  nutritionValue: {
+    textAlign: 'right',
+    fontWeight: '500',
+    fontSize: '0.875rem'
+  },
+  emptyState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#94a3b8'
+  },
+  loadingState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#94a3b8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1rem'
+  },
+  errorState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#f87171',
+    background: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: '0.75rem',
+    border: '1px solid rgba(239, 68, 68, 0.2)'
+  }
 };
 
 function parseJsonSafe(text) {
@@ -74,9 +236,16 @@ export default function RecipeList() {
     return () => { cancelled = true; };
   }, []);
 
-  //Show toast on first load only
+  // Show toast on first load only
   useEffect(() => {
-    toast.info("Click on a recipe to view full page", { autoClose: 4500 });
+    toast.info("Click on a recipe to view full page", { 
+      autoClose: 4500,
+      style: {
+        background: 'rgba(30, 41, 59, 0.95)',
+        color: '#f8fafc',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }
+    });
   }, []);
 
   const toPerServing = (value, baseServings) => {
@@ -85,7 +254,7 @@ export default function RecipeList() {
     return Math.round(per);
   };
 
-  //Search by name (cade-insensitive)
+  // Search by name (case-insensitive)
   const filtered = useMemo(() => {
     if (!search || !search.trim()) return recipes;
     const q = search.trim().toLowerCase();
@@ -93,101 +262,154 @@ export default function RecipeList() {
   }, [recipes, search]);
 
   if (loading) {
-    return <div style={{ padding: 20 }}>Loading recipes…</div>;
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingState}>
+          <Utensils style={{ width: '1.5rem', height: '1.5rem', color: '#8b5cf6' }} />
+          Loading recipes…
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div style={{ padding: 20, color: "crimson" }}>{error}</div>;
+    return (
+      <div style={styles.container}>
+        <div style={styles.errorState}>
+          {error}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={styles.container}>
       <ToastContainer position="top-right" />
-      <h1 style={{ marginBottom: 12 }}>All Recipes</h1>
+      
+      <div style={styles.header}>
+        <h1 style={styles.title}>
+          <Utensils style={{ width: '2.5rem', height: '2.5rem', color: '#8b5cf6' }} />
+          Recipe Collection
+        </h1>
+        <p style={styles.subtitle}>Discover and explore your culinary creations</p>
+      </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th colSpan={6} style={{ padding: 10, textAlign: "left", background: "#fafafa", borderBottom: "1px solid #eee" }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: 720 }}>
-                  <input
-                    type="search"
-                    placeholder="Search recipes by name..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e5e7eb",
-                      fontSize: 14
-                    }}
-                    aria-label="Search recipes"
-                  />
-                  <button
-                    onClick={() => setSearch("")}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e5e7eb",
-                      background: "#fff",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Clear
-                  </button>
+      <div style={styles.searchCard}>
+        <div style={styles.searchContainer}>
+          <div style={styles.searchInputContainer}>
+            <Search style={{ ...styles.searchIcon, width: '1.25rem', height: '1.25rem' }} />
+            <input
+              type="search"
+              placeholder="Search recipes by name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.searchInput}
+              aria-label="Search recipes"
+            />
+          </div>
+          <button
+            onClick={() => setSearch("")}
+            style={styles.clearButton}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(139, 92, 246, 0.2)';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(139, 92, 246, 0.1)';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            <X style={{ width: '1rem', height: '1rem' }} />
+            Clear
+          </button>
+        </div>
+        
+        <div style={styles.resultInfo}>
+          <Utensils style={{ width: '1rem', height: '1rem' }} />
+          Showing {filtered.length} of {recipes.length} recipes
+        </div>
+      </div>
 
-                  <div style={{ marginLeft: "auto", color: "#6b7280", fontSize: 13 }}>
-                    Showing {filtered.length} / {recipes.length}
-                  </div>
-                </div>
-              </th>
-            </tr>
-            <tr>
-              <th style={thStyle}>Info</th>
-              <th style={thStyle}>Nutrition</th>
-            </tr>
-            <tr>
-              <th style={thStyle}>Image</th>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Calories (per serving)</th>
-              <th style={thStyle}>Carbs (g)</th>
-              <th style={thStyle}>Protein (g)</th>
-              <th style={thStyle}>Fat (g)</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.length === 0 ? (
+      <div style={styles.tableContainer}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={styles.table}>
+            <thead style={styles.tableHeader}>
               <tr>
-                <td colSpan={6} style={{ padding: 12, color: "#6b7280" }}>No recipes match your search.</td>
+                <th style={styles.categoryHeader} colSpan={2}>Recipe Info</th>
+                <th style={styles.categoryHeader} colSpan={4}>Nutrition per Serving</th>
               </tr>
-            ) : filtered.map((r) => (
-              <tr
-                key={r.id}
-                onClick={() => navigate(`/recipe/${r.id}`)}
-                style={{ cursor: "pointer", borderBottom: "1px solid #e6e9ee" }}
-                title={`Open ${r.name}`}
-              >
-                <td style={{ padding: 8, width: 120 }}>
-                  {r.image ? (
-                    <img src={r.image} alt={r.name} style={{ width: 100, height: 70, objectFit: "cover", borderRadius: 6 }} />
-                  ) : (
-                    <div style={{ width: 100, height: 70, display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f4f6", borderRadius: 6, color: "#64748b" }}>
-                      No image
-                    </div>
-                  )}
-                </td>
-                <td style={{ padding: 12 }}>{r.name}</td>
-                <td style={{ padding: 12, textAlign: "right" }}>{toPerServing(r.calories, r.base_servings)}</td>
-                <td style={{ padding: 12, textAlign: "right" }}>{toPerServing(r.carbs, r.base_servings)}</td>
-                <td style={{ padding: 12, textAlign: "right" }}>{toPerServing(r.protein, r.base_servings)}</td>
-                <td style={{ padding: 12, textAlign: "right" }}>{toPerServing(r.fat, r.base_servings)}</td>
+              <tr>
+                <th style={styles.columnHeader}>Image</th>
+                <th style={styles.columnHeader}>Name</th>
+                <th style={{ ...styles.columnHeader, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Zap style={{ width: '1rem', height: '1rem', color: '#fbbf24' }} />
+                  Calories
+                </th>
+                <th style={styles.columnHeader}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Wheat style={{ width: '1rem', height: '1rem', color: '#f59e0b' }} />
+                    Carbs (g)
+                  </div>
+                </th>
+                <th style={styles.columnHeader}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Dumbbell style={{ width: '1rem', height: '1rem', color: '#ef4444' }} />
+                    Protein (g)
+                  </div>
+                </th>
+                <th style={styles.columnHeader}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Droplet style={{ width: '1rem', height: '1rem', color: '#06b6d4' }} />
+                    Fat (g)
+                  </div>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={styles.emptyState}>
+                    <Utensils style={{ width: '3rem', height: '3rem', color: '#4b5563', marginBottom: '1rem' }} />
+                    <div>No recipes match your search.</div>
+                  </td>
+                </tr>
+              ) : filtered.map((r) => (
+                <tr
+                  key={r.id}
+                  onClick={() => navigate(`/recipe/${r.id}`)}
+                  style={styles.row}
+                  title={`Open ${r.name}`}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.05)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(139, 92, 246, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <td style={styles.imageCell}>
+                    {r.image ? (
+                      <img src={r.image} alt={r.name} style={styles.recipeImage} />
+                    ) : (
+                      <div style={styles.noImage}>
+                        <Utensils style={{ width: '1.5rem', height: '1.5rem' }} />
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ ...styles.cell, ...styles.recipeName }}>{r.name}</td>
+                  <td style={{ ...styles.cell, ...styles.nutritionValue }}>{toPerServing(r.calories, r.base_servings)}</td>
+                  <td style={{ ...styles.cell, ...styles.nutritionValue }}>{toPerServing(r.carbs, r.base_servings)}</td>
+                  <td style={{ ...styles.cell, ...styles.nutritionValue }}>{toPerServing(r.protein, r.base_servings)}</td>
+                  <td style={{ ...styles.cell, ...styles.nutritionValue }}>{toPerServing(r.fat, r.base_servings)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

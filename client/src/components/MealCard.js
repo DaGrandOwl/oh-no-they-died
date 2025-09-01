@@ -111,56 +111,43 @@ export default function MealCard({
   const showImage = !hideImage && !!data.image && !compact && !isMinimized;
 
   // Theme-based styles
-  const cardStyles = darkTheme ? {
-    container: {
-      borderRadius: '0.75rem',
-      border: "1px solid rgba(148, 163, 184, 0.1)",
-      padding: isMinimized ? '0.5rem' : (compact ? '0.75rem' : '1rem'),
-      display: "flex",
-      gap: isMinimized ? '0.5rem' : (compact ? '0.75rem' : '1rem'),
-      alignItems: "center",
-      opacity: isDragging ? 0.5 : 1,
-      background: 'rgba(139, 92, 246, 0.05)',
-      backdropFilter: 'blur(8px)',
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-      minWidth: 0,
-      transition: 'all 0.2s ease',
-      cursor: 'grab',
-      // NEW: minimized state styles
-      ...(isMinimized && {
-        height: '2.5rem',
-        overflow: 'hidden',
-        padding: '0.25rem 0.5rem',
-        gap: '0.5rem'
-      }),
-      // NEW: hover expansion
-      ...(plannerMode && {
-        ':hover': {
-          zIndex: 1000,
-          transform: 'scale(1.02)'
-        }
-      })
-    },
-    imageContainer: {
-      width: isMinimized ? 24 : (compact ? 40 : (showImage ? 80 : 48)),
-      height: isMinimized ? 24 : (compact ? 40 : (showImage ? 60 : 48)),
+const cardStyles = darkTheme ? {
+  container: {
+    // ... existing container styles ...
+    // NEW: minimized state styles
+    ...(isMinimized && {
+      height: '40px',
+      width: '40px',
+      padding: '0.25rem',
       borderRadius: '0.5rem',
-      overflow: "hidden",
-      background: showImage ? "rgba(30, 41, 59, 0.6)" : "rgba(139, 92, 246, 0.15)",
-      flexShrink: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      border: '1px solid rgba(148, 163, 184, 0.1)'
-    },
-    title: {
-      fontWeight: 600,
-      fontSize: isMinimized ? '0.75rem' : (compact ? '0.8125rem' : '0.9375rem'),
-      color: "#f8fafc",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    },
+      overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }),
+  },
+  imageContainer: {
+    width: isMinimized ? 32 : (compact ? 40 : (showImage ? 80 : 48)),
+    height: isMinimized ? 32 : (compact ? 40 : (showImage ? 60 : 48)),
+    // ... rest of imageContainer styles ...
+  },
+  title: {
+    // ... existing title styles ...
+    // NEW: minimized title
+    ...(isMinimized && {
+      position: 'absolute',
+      bottom: 2,
+      left: 2,
+      right: 2,
+      fontSize: '0.5rem',
+      textAlign: 'center',
+      background: 'rgba(0, 0, 0, 0.6)',
+      padding: '1px 2px',
+      borderRadius: '2px',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }),
+  },
     calories: {
       fontWeight: 700,
       fontSize: isMinimized ? '0.625rem' : '0.8125rem',
@@ -381,6 +368,24 @@ export default function MealCard({
         }}>
           <div style={cardStyles.title}>
             {data.name}
+            {isMinimized && (
+              <div style={{
+                position: 'absolute',
+                bottom: 2,
+                left: 2,
+                right: 2,
+                fontSize: '0.5rem',
+                textAlign: 'center',
+                background: 'rgba(0, 0, 0, 0.6)',
+                padding: '1px 2px',
+                borderRadius: '2px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {data.name}
+              </div>
+            )}
           </div>
 
           <div style={{ textAlign: "right", minWidth: isMinimized ? 'auto' : 90 }}>

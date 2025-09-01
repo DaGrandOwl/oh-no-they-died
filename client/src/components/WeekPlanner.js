@@ -129,21 +129,25 @@ function PlannerCell({
   }, [meals]);
 
   const cellStyle = darkTheme ? {
-    minHeight: 80,
-    padding: "0.25rem",
+    minHeight: 60, // Reduced from 80
+    padding: "0.15rem", // Reduced padding
     border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
     borderRadius: 4,
     background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
     verticalAlign: "top",
-    cursor: highlight ? "pointer" : "default"
+    cursor: highlight ? "pointer" : "default",
+    position: 'relative',
+    overflow: 'hidden'
   } : {
-    minHeight: 80,
-    padding: "0.25rem",
+    minHeight: 60, // Reduced from 80
+    padding: "0.15rem", // Reduced padding
     border: highlight ? "2px solid #8b5cf6" : "1px dashed rgba(148,163,184,0.3)",
     borderRadius: 4,
     background: isOver && canDrop ? "rgba(139,92,246,0.12)" : highlight ? "rgba(139,92,246,0.08)" : "transparent",
     verticalAlign: "top",
-    cursor: highlight ? "pointer" : "default"
+    cursor: highlight ? "pointer" : "default",
+    position: 'relative',
+    overflow: 'hidden'
   };
 
   const removeButtonStyle = darkTheme ? {
@@ -418,10 +422,12 @@ export default function WeekPlanner({
     borderCollapse: "collapse",
     background: 'rgba(30, 41, 59, 0.3)',
     borderRadius: '0.5rem',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    tableLayout: 'fixed' // Add this to control table layout
   } : {
     width: "100%", 
-    borderCollapse: "collapse"
+    borderCollapse: "collapse",
+    tableLayout: 'fixed'
   };
 
   const thStyle = darkTheme ? {
@@ -439,13 +445,15 @@ export default function WeekPlanner({
     color: "#a78bfa",
     textAlign: "center",
     background: "rgba(139,92,246,0.1)",
-    padding: 8
+    padding: 4, // Reduced padding
+    fontSize: '0.8rem' // Smaller font
   } : {
     fontWeight: 600,
-    color: "#7c3aed",
+    color: "#a78bfa",
     textAlign: "center",
-    background: "rgba(139,92,246,0.04)",
-    padding: 8
+    background: "rgba(199, 180, 243, 0.1)",
+    padding: 4, // Reduced padding
+    fontSize: '0.8rem' // Smaller font
   };
 
   return (
@@ -473,7 +481,7 @@ export default function WeekPlanner({
             {weekDates.map(({ day, displayDate }, idx) => (
               <th key={`${day}-${idx}`} style={thStyle}>
                 <div style={{ fontSize: 12, color: darkTheme ? "#94a3b8" : "#6b7280" }}>{displayDate}</div>
-                <div style={{ fontWeight: 600 }}>{day}</div>
+
               </th>
             ))}
           </tr>
