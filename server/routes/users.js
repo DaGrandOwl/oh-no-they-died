@@ -14,7 +14,7 @@ export default fp(async function (fastify, opts) {
 
   // REGISTER
   fastify.post('/api/register', {
-    preHandler: fastify.rateLimit({ max: 10, timeWindow: '1 minute' })
+    preHandler: fastify.rateLimit({ max: 100, timeWindow: '1 minute' })
   }, async (request, reply) => {
     try {
       if (request.headers['content-type'] !== 'application/json') {
@@ -71,7 +71,7 @@ export default fp(async function (fastify, opts) {
 
   // LOGIN
   fastify.post('/api/login', {
-    preHandler: fastify.rateLimit({ max: 10, timeWindow: '1 minute' })
+    preHandler: fastify.rateLimit({ max: 100, timeWindow: '1 minute' })
   }, async (request, reply) => {
     try {
       if (request.headers['content-type'] !== 'application/json') {

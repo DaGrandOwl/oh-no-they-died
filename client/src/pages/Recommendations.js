@@ -26,16 +26,8 @@ function confirmToast(message, onConfirm, options = {}) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <span>{message}</span>
       <div style={{ display: "flex", gap: 8 }}>
-        <button
-          onClick={() => { toast.dismiss(); onConfirm(); }}
-          style={{ padding: "2px 6px", background: "#4ade80", border: "none", borderRadius: 4, cursor: "pointer" }}>
-          Yes
-        </button>
-        <button
-          onClick={() => toast.dismiss()}
-          style={{ padding: "2px 6px", background: "#f87171", border: "none", borderRadius: 4, cursor: "pointer" }}>
-          Cancel
-        </button>
+        <button onClick={() => { toast.dismiss(); onConfirm(); }} style={{ padding: "2px 6px", background: "#4ade80", border: "none", borderRadius: 4, cursor: "pointer" }}>Yes</button>
+        <button onClick={() => toast.dismiss()} style={{ padding: "2px 6px", background: "#f87171", border: "none", borderRadius: 4, cursor: "pointer" }}>Cancel</button>
       </div>
     </div>,
     { autoClose: false, ...options }
@@ -48,7 +40,11 @@ function nextDateForWeekday(weekday) {
   const diff = (target - today.getDay() + 7) % 7;
   const next = new Date(today);
   next.setDate(today.getDate() + (diff === 0 ? 0 : diff));
-  return next.toISOString().slice(0,10);
+
+  const y = next.getFullYear();
+  const m = String(next.getMonth() + 1).padStart(2, "0");
+  const d = String(next.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 // Sidebar styles
@@ -167,38 +163,17 @@ export default function Recommendations() {
   const { token } = useAuth();
   const [sidebarMinimized, setSidebarMinimized] = useState(false);
 
-  // Filters: no servings filter here
   const [filters, setFilters] = useState({
-    cuisine: "",
-    mealType: "",
-    dietType: "",
-    maxCalories: "",
-    minCarbs: "",
-    minProtein: "",
-    minFat: "",
-    maxCost: 3,           // default to highest tier ($$$)
-    inventoryMatch: false
+    cuisine: "", mealType: "", dietType: "", maxCalories: "", minCarbs: "", minProtein: "", minFat: "", maxCost: 3, inventoryMatch: false
   });
 
-  const initialFilters = {
-    cuisine: "",
-    mealType: "",
-    dietType: "",
-    maxCalories: "",
-    minCarbs: "",
-    minProtein: "",
-    minFat: "",
-    maxCost: 3,
-    inventoryMatch: false
-  };
+  const initialFilters = { cuisine: "", mealType: "", dietType: "", maxCalories: "", minCarbs: "", minProtein: "", minFat: "", maxCost: 3, inventoryMatch: false };
 
   const [results, setResults] = useState([]);
   const [highlightedRecipe, setHighlightedRecipe] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
   const toggleTheme = () => {
     const current = prefs?.theme === "dark" ? "dark" : "light";
@@ -208,7 +183,6 @@ export default function Recommendations() {
   async function searchRecipes() {
     try {
       setLoading(true);
-
       const params = {};
       if (filters.cuisine && String(filters.cuisine).trim() !== "") params.cuisine = filters.cuisine;
       if (filters.mealType && String(filters.mealType).trim() !== "") params.mealType = filters.mealType;
@@ -217,49 +191,29 @@ export default function Recommendations() {
       if (filters.minCarbs !== "" && filters.minCarbs != null) params.carbs = filters.minCarbs;
       if (filters.minProtein !== "" && filters.minProtein != null) params.protein = filters.minProtein;
       if (filters.minFat !== "" && filters.minFat != null) params.fat = filters.minFat;
-
-      // maxCost must be 1..3 to match appx_cost DB column semantics
       const mc = Number(filters.maxCost);
       if ([1,2,3].includes(mc)) params.maxCost = mc;
-
       if (filters.inventoryMatch === true) params.inventoryMatch = true;
 
       const qs = new URLSearchParams(params).toString();
       const url = `${process.env.REACT_APP_API_URL}/api/recommendations${qs ? ("?" + qs) : ""}`;
 
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      // read text once and parse JSON defensively (prevents multiple body reads / HTML responses causing exceptions)
+      const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const text = await res.text();
-
       if (!res.ok) {
-        // backend returned an error page or JSON error
         console.error("Recommendations failed:", text);
         toast.error("Failed to get recommendations");
         setResults([]);
+        setLoading(false);
         return;
       }
-
       let data;
-      try {
-        data = text ? JSON.parse(text) : [];
-      } catch (err) {
-        console.error("Non-JSON recommendations response:", text);
-        toast.error("Server returned invalid data");
-        setResults([]);
-        return;
-      }
-
+      try { data = text ? JSON.parse(text) : []; } catch (err) { console.error("Non-JSON recommendations response:", text); toast.error("Server returned invalid data"); setResults([]); setLoading(false); return; }
       let normalized = [];
       if (Array.isArray(data)) normalized = data;
       else if (data && typeof data === "object") normalized = [data];
       else normalized = [];
-
-      // limit to 5 as UI expects
       normalized = normalized.slice(0, 5);
-
       setResults(normalized);
     } catch (err) {
       console.error(err);
@@ -271,14 +225,10 @@ export default function Recommendations() {
   }
 
   function startHighlight(recipeWithServings) {
-    // recipeWithServings should include the current servings as selected in the MealCard
     setHighlightedRecipe(recipeWithServings);
     toast.info("Click a slot in the planner to add this meal (or drop onto a slot).", { autoClose: 3000 });
   }
-
-  function clearHighlight() {
-    setHighlightedRecipe(null);
-  }
+  function clearHighlight() { setHighlightedRecipe(null); }
 
   async function handleSlotClick(date, mealTime) {
     if (!highlightedRecipe) {
@@ -298,19 +248,13 @@ export default function Recommendations() {
     try {
       function toArray(val) {
         if (!val) return [];
-        if (Array.isArray(val)) {
-          return val.filter(v => typeof v === "string" && v.trim() !== "");
-        }
-        if (typeof val === "string") {
-          return val.split(",").map(s => s.trim()).filter(s => s.length > 0);
-        }
+        if (Array.isArray(val)) return val.filter(v => typeof v === "string" && v.trim() !== "");
+        if (typeof val === "string") return val.split(",").map(s => s.trim()).filter(Boolean);
         return [];
       }
       const userAllergens = toArray(prefs?.allergens).map(a => a.toLowerCase());
       const recipeAllergens = toArray(recipe.allergens).map(a => a.toLowerCase());
       const hasBad = recipeAllergens.some(a => userAllergens.includes(a));
-
-      // honor servings included on recipe (from MealCard drag or highlighted item)
       const servingsToUse = Number(recipe.servings ?? recipe.recommended_servings ?? 1);
 
       const doAdd = async () => {
@@ -320,10 +264,7 @@ export default function Recommendations() {
       };
 
       if (hasBad) {
-        confirmToast(
-          "This recipe contains allergens you marked. Add anyway?",
-          async () => doAdd()
-        );
+        confirmToast("This recipe contains allergens you marked. Add anyway?", async () => doAdd());
       } else {
         await doAdd();
       }
@@ -333,10 +274,7 @@ export default function Recommendations() {
     }
   }
 
-  const clearAll = () => {
-    setFilters({ ...initialFilters });
-    setResults([]);
-  };
+  const clearAll = () => { setFilters({ ...initialFilters }); setResults([]); };
 
   const navLinkStyle = ({ isActive }) => ({
     ...sidebarStyles.navItem,
