@@ -225,18 +225,6 @@ export default function RecipeID() {
         </div>
 
         <div style={cardStyle}>
-          <h2 style={{
-            fontSize: '1.5rem',
-            fontWeight: '600',
-            color: '#e2e8f0',
-            margin: '0 0 0.5rem 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <span>📋</span> {recipe.name}
-          </h2>
-          
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <h1 style={{ 
