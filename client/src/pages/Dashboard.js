@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import WeekPlanner from "../components/WeekPlanner";
@@ -74,6 +74,11 @@ export default function Dashboard() {
 
   const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
+  const plannerContainerStyle = {
+    overflowX: 'auto',
+    width: '100%'
+  };
+
   async function searchRecipes() {
     try {
       setLoading(true);
@@ -112,6 +117,11 @@ export default function Dashboard() {
       setLoading(false);
     }
   }
+
+  // Load initial results on component mount
+  useEffect(() => {
+    searchRecipes();
+  }, []); // Empty dependency array to run only once on mount
 
   function startHighlight(recipeWithServings) {
     setHighlightedRecipe(recipeWithServings);
@@ -195,12 +205,6 @@ export default function Dashboard() {
                   </h1>
                   <p style={{ fontSize: '1.125rem', color:'#94a3b8', margin: 0 }}>Discover and plan your next meal</p>
                 </div>
-
-                {highlightedRecipe && (
-                  <button onClick={() => clearHighlight()} style={{ ...buttonSecondary, background: 'rgba(239,68,68,0.1)', color:'#f87171' }}>
-                    Cancel Selection
-                  </button>
-                )}
               </div>
             </div>
 
@@ -266,13 +270,22 @@ export default function Dashboard() {
                   <h2 style={{ fontSize:'1.5rem', fontWeight:600, marginBottom: '1rem' }}>🍽️ Recipe Results {results.length > 0 && `(${results.length})`}</h2>
 
                   {results.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding:'3rem 1rem', color:'#94a3b8', background:'rgba(139,92,246,0.05)', borderRadius: '0.75rem' }}>
+                    <div style={{ textAlign: 'center', padding:'3rem 1rem', color:'#94a3b8', background:'rgba(139,92,246,0.05)', borderRadius: '0.75rem', height: '130px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ fontSize:'3rem', marginBottom: '1rem' }}>🔍</div>
                       <div style={{ fontSize:'1.125rem', fontWeight: '500' }}>No recipes found</div>
                       <div style={{ fontSize:'0.875rem' }}>Try adjusting your search filters</div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ 
+                      height: '226px', 
+                      overflowY: 'auto',
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '1rem',
+                      paddingRight: '8px',
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(139,92,246,0.5) rgba(30,41,59,0.3)'
+                    }}>
                       {results.map(r => (
                         <div key={r.id}>
                           <MealCard recipe={r} compact={false} hideImage={false} onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)} onClearHighlight={() => clearHighlight()} />
@@ -281,7 +294,11 @@ export default function Dashboard() {
                       ))}
                     </div>
                   )}
-
+                {highlightedRecipe && (
+                  <button onClick={() => clearHighlight()} style={{ ...buttonSecondary, background: 'rgba(239,68,68,0.1)', color:'#f87171' }}>
+                    Cancel Selection
+                  </button>
+                )}
                 </div>
               </div>
             </div>
@@ -290,19 +307,22 @@ export default function Dashboard() {
             <div style={{ marginTop: '1.5rem' }}>
               <div style={cardStyle}>
                 <h3 style={{ fontSize:'1.25rem', fontWeight:600, marginBottom: '1rem' }}>📅 Weekly Planner</h3>
-                <WeekPlanner
-                  plan={plan}
-                  highlightedRecipe={highlightedRecipe}
-                  onSlotClick={handleSlotClick}
-                  onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
-                  onRemove={(args) => handleRemove(args)}
-                  dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
-                  plannerMode={true}
-                  minimized={true}
-                />
+                <div style={plannerContainerStyle}>
+                  <WeekPlanner
+                    plan={plan}
+                    highlightedRecipe={highlightedRecipe}
+                    onSlotClick={handleSlotClick}
+                    onDrop={(recipe, date, mealTime) => handleDrop(recipe, date, mealTime)}
+                    onRemove={(args) => handleRemove(args)}
+                    dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
+                    plannerMode={true}
+                    minimized={true}
+                    darkTheme={true}
+                  />
+                </div>
 
                 <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#94a3b8', padding: '0.75rem', background:'rgba(139,92,246,0.05)', borderRadius: 8 }}>
-                  <strong>Tip:</strong> Drag recipe cards onto the planner (desktop) or press Add then click a time slot (mobile)
+                  <strong>Tip:</strong> Drag recipe cards onto the planner
                 </div>
               </div>
             </div>

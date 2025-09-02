@@ -8,7 +8,10 @@ import MealCard from "./MealCard";
 
 const mealTimes = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
+const mealContainerStyle = {
+  position: 'relative',
+  zIndex: 10
+};
 function buildWeekDates(dateForWeekday) {
   return daysOfWeek.map((day) => {
     const weekdayKey = day.toLowerCase();
@@ -89,7 +92,7 @@ function PlannerCell({
   highlightedRecipe,
   plannerMode = false,
   minimized = false,
-  darkTheme = false
+  darkTheme = true
 }) {
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
@@ -136,7 +139,8 @@ function PlannerCell({
     verticalAlign: "top",
     cursor: highlight ? "pointer" : "default",
     position: 'relative',
-    overflow: 'hidden'
+    overflow: 'visible', // Changed from 'hidden' to 'visible'
+    minWidth: '180px' // Added minimum width to ensure cells don't collapse too much
   } : {
     minHeight: 60,
     padding: "0.15rem",
@@ -146,7 +150,8 @@ function PlannerCell({
     verticalAlign: "top",
     cursor: highlight ? "pointer" : "default",
     position: 'relative',
-    overflow: 'hidden'
+    overflow: 'visible', // Changed from 'hidden' to 'visible'
+    minWidth: '180px' // Added minimum width
   };
 
   const removeButtonStyle = darkTheme ? {
@@ -181,58 +186,60 @@ function PlannerCell({
       style={cellStyle}
       onClick={() => highlight && onSlotClick && onSlotClick(isoDate, mealTime)}
     >
-      {(!mergedMeals || mergedMeals.length === 0) ? (
-        <div style={{ 
-          textAlign: "center", 
-          color: highlight ? "#8b5cf6" : (darkTheme ? "#94a3b8" : "#94a3b8"), 
-          fontSize: 12, 
-          marginBottom: 6 
-        }}>
-          + Add Meal
-        </div>
-      ) : (
-        mergedMeals.map((meal, idx) => {
-          const key = meal.clientId ? `c-${meal.clientId}` : `m-${meal.id ?? meal.recipeId ?? idx}`;
-          return (
-            <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <MealCard
-                item={meal}
-                compact={true}
-                hideImage={true}
-                isoDate={isoDate}
-                mealTime={mealTime}
-                onAddToPlan={onDropMeal}
-                plannerMode={plannerMode}
-                minimized={minimized}
-                darkTheme={darkTheme}
-              />
-              <button
-                onClick={() => {
-                  const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
-                  const rawIndex =
-                    meal.__sourceIndices?.[0] ??
-                    meals.findIndex(x => {
-                      const getId = y => y.clientId ?? y.serverId ?? y.id ?? y.recipeId;
-                      return getId(x) === (meal.clientId ?? meal.serverId ?? meal.id ?? meal.recipeId);
-                    });
+      <div style={mealContainerStyle}>
+        {(!mergedMeals || mergedMeals.length === 0) ? (
+          <div style={{ 
+            textAlign: "center", 
+            color: highlight ? "#8b5cf6" : (darkTheme ? "#94a3b8" : "#94a3b8"), 
+            fontSize: 12, 
+            marginBottom: 6 
+          }}>
+            + Add Meal
+          </div>
+        ) : (
+          mergedMeals.map((meal, idx) => {
+            const key = meal.clientId ? `c-${meal.clientId}` : `m-${meal.id ?? meal.recipeId ?? idx}`;
+            return (
+              <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <MealCard
+                  item={meal}
+                  compact={true}
+                  hideImage={true}
+                  isoDate={isoDate}
+                  mealTime={mealTime}
+                  onAddToPlan={onDropMeal}
+                  plannerMode={plannerMode}
+                  minimized={minimized}
+                  darkTheme={darkTheme}
+                />
+                <button
+                  onClick={() => {
+                    const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
+                    const rawIndex =
+                      meal.__sourceIndices?.[0] ??
+                      meals.findIndex(x => {
+                        const getId = y => y.clientId ?? y.serverId ?? y.id ?? y.recipeId;
+                        return getId(x) === (meal.clientId ?? meal.serverId ?? meal.id ?? meal.recipeId);
+                      });
 
-                  onRemove && onRemove({
-                    key: keyStr,
-                    index: rawIndex,
-                    serverId: meal.serverId ?? null,
-                    clientId: meal.clientId ?? null,
-                    recipeId: meal.id ?? meal.recipeId ?? null,
-                  });
-                }}
-                style={removeButtonStyle}
-                title="Remove"
-              >
-                <X style={{ width: 14, height: 14 }} />
-              </button>
-            </div>
-          );
-        })
-      )}
+                    onRemove && onRemove({
+                      key: keyStr,
+                      index: rawIndex,
+                      serverId: meal.serverId ?? null,
+                      clientId: meal.clientId ?? null,
+                      recipeId: meal.id ?? meal.recipeId ?? null,
+                    });
+                  }}
+                  style={removeButtonStyle}
+                  title="Remove"
+                >
+                  <X style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
     </td>
   );
 }
@@ -431,15 +438,6 @@ export default function WeekPlanner({
     padding: 16
   };
 
-  const headerStyle = darkTheme ? {
-    fontSize: 16, 
-    margin: 0,
-    color: '#f8fafc'
-  } : {
-    fontSize: 16, 
-    margin: 0
-  };
-
   const navButtonStyle = darkTheme ? {
     padding: "6px 10px", 
     borderRadius: 8, 
@@ -457,15 +455,17 @@ export default function WeekPlanner({
 
   const tableStyle = darkTheme ? {
     width: "100%", 
-    borderCollapse: "collapse",
+    borderCollapse: "separate",
+    borderSpacing: "0 4px",
     background: 'rgba(30, 41, 59, 0.3)',
     borderRadius: '0.5rem',
-    overflow: 'hidden',
-    tableLayout: 'fixed'
+    overflow: 'visible', // Changed from 'hidden' to 'visible'
+    tableLayout: 'auto' // Changed from 'fixed' to 'auto'
   } : {
     width: "100%", 
-    borderCollapse: "collapse",
-    tableLayout: 'fixed'
+    borderCollapse: "separate",
+    borderSpacing: "0 4px",
+    tableLayout: 'auto' // Changed from 'fixed' to 'auto'
   };
 
   const thStyle = darkTheme ? {
@@ -506,7 +506,6 @@ export default function WeekPlanner({
       />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <h2 style={headerStyle}>Weekly Planner</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={() => setWeekOffset(o => o - 1)} style={navButtonStyle}>Previous</button>
           <button onClick={() => setWeekOffset(0)} style={navButtonStyle}>This Week</button>
