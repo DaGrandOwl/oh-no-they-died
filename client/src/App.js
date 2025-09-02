@@ -27,10 +27,10 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
-          
+
+          <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
           {/* Logged in users only */}
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}> 
-            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} /> 
             <Route path="/recipe" element={<RecipeList />} />

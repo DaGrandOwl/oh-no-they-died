@@ -8,29 +8,28 @@ const StartPage = () => {
   const [currentFeature, setCurrentFeature] = useState(0);
   const [animationState, setAnimationState] = useState("entering");
 
-  // Features to cycle through in the hero section
   const features = [
     {
       title: "Plan Your Meals",
-      description: "Effortlessly organize your weekly meals with our intuitive planner.",
+      description: "Organize your weekly meals easily.",
       icon: <Heart size={24} />,
       color: "#ef4444",
     },
     {
       title: "Save Time",
-      description: "Reduce decision fatigue and shopping time with organized meal plans.",
+      description: "Reduce decision fatigue with easy to search meals.",
       icon: <Clock size={24} />,
       color: "#06b6d4",
     },
     {
-      title: "Eat Healthier",
-      description: "Make better food choices with planned, balanced meals throughout the week.",
+      title: "Track Your Meals",
+      description: "View your meal history and ingredients on the fly.",
       icon: <Star size={24} />,
       color: "#8b5cf6",
     },
     {
       title: "For Everyone",
-      description: "Perfect for individuals, couples, and families of all sizes.",
+      description: "Great for individuals, couples, and families.",
       icon: <Users size={24} />,
       color: "#10b981",
     },
@@ -119,7 +118,6 @@ const StartPage = () => {
         </button>
       </header>
 
-      {/* Hero section */}
       <section style={{
         textAlign: "center",
         margin: "0 auto 6rem",
@@ -154,6 +152,7 @@ const StartPage = () => {
           maxWidth: "500px",
           margin: "0 auto",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           gap: "1rem",
           opacity: animationState === "entering" ? 1 : 0,
@@ -209,7 +208,7 @@ const StartPage = () => {
           height: "fit-content",
           transition: "transform 0.3s ease"
         }}>
-          <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Weekly Planning</h3>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Weekly Planner</h3>
           <p style={{ color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
           </p>
@@ -233,7 +232,7 @@ const StartPage = () => {
           height: "fit-content",
           transition: "transform 0.3s ease"
         }}>
-          <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Grocery Lists</h3>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Inventory Management</h3>
           <p style={{ color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
           </p>

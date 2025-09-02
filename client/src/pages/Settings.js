@@ -4,10 +4,10 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   Utensils,
   Shield,
+  Settings,
 } from "lucide-react";
-import { cardStyle, buttonPrimary, buttonGhost } from "../components/Styles";
+import { cardStyle, buttonGhost } from "../components/Styles";
 
-// Styles for the new design
 const settingsStyles = {
   container: {
     minHeight: "100vh",
@@ -109,10 +109,10 @@ const settingsStyles = {
     boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
   },
   toggleSwitchActive: {
-    transform: "translateX(1.25rem)",
+    transform: "translateX(0.95rem)",
   },
   toggleSwitchInactive: {
-    transform: "translateX(0.125rem)",
+    transform: "translateX(-0.2rem)",
   },
   select: {
     padding: "0.5rem 0.75rem",
@@ -174,31 +174,43 @@ const settingsStyles = {
     margin: 0,
   },
 };
-
+  const ToggleSwitch = ({ enabled, onChange }) => (
+    <button
+      onClick={onChange}
+      aria-pressed={enabled}
+      style={{
+        ...settingsStyles.toggle,
+        ...(enabled ? settingsStyles.toggleActive : settingsStyles.toggleInactive),
+      }}
+    >
+      <span
+        style={{
+          ...settingsStyles.toggleSwitch,
+          ...(enabled ? settingsStyles.toggleSwitchActive : settingsStyles.toggleSwitchInactive),
+        }}
+      />
+    </button>
+  );
 
 export default function SettingsPage() {
   const { prefs, updatePrefs } = usePreferences();
   const { logout } = useAuth();
 
   // Local state for immediate UI updates
-  const [darkMode, setDarkMode] = useState(prefs?.theme === "dark");
   const [inventory, setInventory] = useState(!!prefs?.user_inventory);
-  const [shoppingList, setShoppingList] = useState(!!prefs?.shopping_list);
   const [allergens, setAllergens] = useState(Array.isArray(prefs?.allergens) ? prefs.allergens : []);
   const [dietType, setDietType] = useState(prefs?.diet_type || "any");
 
   // Sync local state when prefs change
   useEffect(() => {
-    setDarkMode(prefs?.theme === "dark");
     setInventory(!!prefs?.user_inventory);
-    setShoppingList(!!prefs?.shopping_list);
     setAllergens(Array.isArray(prefs?.allergens) ? prefs.allergens : []);
     setDietType(prefs?.diet_type || "any");
   }, [prefs]);
 
   const allergenOptions = [
     "Celiac", "Diabetic", "Nut Allergy", "Dairy Free", 
-    "Shellfish", "Soy", "Egg"
+    "Shellfish", "Soy", "Egg", "Wheat", "Sesame"
   ];
 
   const dietOptions = [
@@ -208,10 +220,16 @@ export default function SettingsPage() {
     { value: "keto", label: "Keto" },
     { value: "paleo", label: "Paleo" },
     { value: "low_carb", label: "Low carb" },
+    { value: "gluten_free", label: "Gluten-Free" },
+    { value: "mediterranean", label: "Mediterranean" }
   ];
 
   // Handlers
-
+  const toggleInventory = () => {
+    const next = !inventory;
+    setInventory(next);
+    updatePrefs({ user_inventory: next });
+  };
   const handleAllergenToggle = (a) => {
     let next;
     if (allergens.includes(a)) next = allergens.filter((x) => x !== a);
@@ -236,8 +254,26 @@ export default function SettingsPage() {
           <h1 style={settingsStyles.title}>Settings</h1>
           <p style={settingsStyles.subtitle}>Customize your meal planning experience</p>
         </div>
+        
 
         <div style={settingsStyles.settingsCard}>
+
+          {/* General Settings Section */}
+          <div style={settingsStyles.section}>
+            <h2 style={settingsStyles.sectionHeader}>
+              <Settings style={{ width: "1.25rem", height: "1.25rem" }} />
+              General Settings
+            </h2>
+
+            <div style={settingsStyles.settingItem}>
+              <div style={settingsStyles.settingInfo}>
+                <h3 style={settingsStyles.settingTitle}>Inventory Tracking</h3>
+                <p style={settingsStyles.settingDesc}>Keep track of your ingredients and supplies</p>
+              </div>
+              <ToggleSwitch enabled={inventory} onChange={toggleInventory} />
+            </div>
+          </div>
+
           {/* Dietary Preferences Section */}
           <div style={settingsStyles.section}>
             <h2 style={settingsStyles.sectionHeader}>

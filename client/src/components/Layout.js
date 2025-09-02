@@ -4,6 +4,7 @@ import {
   Utensils,
   Settings,
   Home,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 
 const sidebarStyles = {
@@ -128,6 +129,10 @@ const Layout = () => {
           <NavLink to="/settings" style={navLinkStyle}>
             <Settings style={{ width: "1rem", height: "1rem" }} />
             Settings
+          </NavLink>
+          <NavLink to="/about" style={navLinkStyle}>
+            <SquareArrowOutUpRight style={{ width: "1rem", height: "1rem" }} />
+            About
           </NavLink>
         </nav>
       </aside>

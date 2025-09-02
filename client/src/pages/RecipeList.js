@@ -145,7 +145,7 @@ const styles = {
     fontSize: '1rem'
   },
   nutritionValue: {
-    textAlign: 'right',
+    textAlign: 'center',
     fontWeight: '500',
     fontSize: '0.875rem'
   },
@@ -342,7 +342,7 @@ export default function RecipeList() {
                 <th style={styles.columnHeader}>Image</th>
                 <th style={styles.columnHeader}>Name</th>
                 <th style={{ ...styles.columnHeader, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Zap style={{ width: '1rem', height: '1rem', color: '#fbbf24' }} />
+                  <Zap style={{ width: '1rem', height: '1rem', color: '#fbbf24', alignItems: 'center' }} />
                   Calories
                 </th>
                 <th style={styles.columnHeader}>

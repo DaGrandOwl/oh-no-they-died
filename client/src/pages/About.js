@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Github, Mail } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { cardStyle } from "../components/Styles";
 
 const About = () => {
@@ -17,7 +17,6 @@ const About = () => {
       position: "relative",
       overflow: "hidden"
     }}>
-      {/* Decorative elements - different from home page */}
       <div style={{
         position: "absolute",
         top: "10%",
@@ -120,15 +119,11 @@ const About = () => {
             About The Project
           </h2>
           <p style={{ color: "#e2e8f0", lineHeight: "1.6", margin: "0 0 1rem 0" }}>
-            Meal Planner is a comprehensive solution designed to simplify meal planning, grocery shopping, 
-            and recipe management. Our mission is to help people eat healthier, save time, and reduce food waste 
-            through thoughtful organization and planning.
+          Meal Planner is a project submission to Scholastica International Tech Summit 2025, Innovators' Arena segment.
           </p>
           <p style={{ color: "#e2e8f0", lineHeight: "1.6", margin: 0 }}>
-            This application was built with React and utilizes modern web technologies to provide a seamless 
-            user experience across all devices. We're committed to continuously improving and adding new 
-            features based on user feedback.
-          </p>
+            This website was built with React and utilizes Vercel/render for hosting, and MySQL for database management.
+          </p> 
         </div>
 
         {/* Team section */}
@@ -182,35 +177,9 @@ const About = () => {
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Set up the backend database as well as the logic for shit.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(6, 182, 212, 0.1)",
-                  color: "#06b6d4",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Github size={16} />
-                </button>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  color: "#8b5cf6",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Mail size={16} />
-                </button>
               </div>
             </div>
 
@@ -240,42 +209,16 @@ const About = () => {
                 textAlign: "center", 
                 color: "#94a3b8",
                 fontSize: "0.875rem"
-              }}>UI/UX Designer</p>
+              }}>Creative Designer</p>
               <p style={{ 
                 color: "#cbd5e1", 
                 lineHeight: "1.5", 
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Provided the creative template and theme for the website.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(6, 182, 212, 0.1)",
-                  color: "#06b6d4",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Github size={16} />
-                </button>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  color: "#8b5cf6",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Mail size={16} />
-                </button>
               </div>
             </div>
 
@@ -312,35 +255,9 @@ const About = () => {
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Ate stuff.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(6, 182, 212, 0.1)",
-                  color: "#06b6d4",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Github size={16} />
-                </button>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  color: "#8b5cf6",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Mail size={16} />
-                </button>
               </div>
             </div>
 
@@ -377,35 +294,9 @@ const About = () => {
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Set up the frontend and thingamajigs.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(6, 182, 212, 0.1)",
-                  color: "#06b6d4",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Github size={16} />
-                </button>
-                <button style={{
-                  padding: "0.4rem",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  color: "#8b5cf6",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <Mail size={16} />
-                </button>
               </div>
             </div>
           </div>
