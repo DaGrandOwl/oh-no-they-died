@@ -305,7 +305,6 @@ export default fp(async function (fastify) {
     }
   });
 
-  // GET /api/user/mealplan - list
   fastify.get("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const userId = request.user?.id;
