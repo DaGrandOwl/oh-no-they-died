@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { cardStyle } from "../components/Styles";
+import logo from '../components/logo.png';
 
 const About = () => {
   const navigate = useNavigate();
@@ -83,7 +84,6 @@ const About = () => {
           <div style={{
             width: "2rem",
             height: "2rem",
-            background: "linear-gradient(45deg, #ef4444, #8b5cf6)",
             borderRadius: "0.5rem",
             display: "flex",
             alignItems: "center",
@@ -91,7 +91,7 @@ const About = () => {
             fontSize: "1rem",
             fontWeight: "bold",
             color: "#fff",
-          }}>MP</div>
+          }}><div><img src={logo} width={75} height={75} alt='MP' /></div></div>
           <h1 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700" }}>About Meal Planner</h1>
         </div>
       </header>
@@ -122,7 +122,7 @@ const About = () => {
           Meal Planner is a project submission to Scholastica International Tech Summit 2025, Innovators' Arena segment.
           </p>
           <p style={{ color: "#e2e8f0", lineHeight: "1.6", margin: 0 }}>
-            This website was built with React and utilizes Vercel/render for hosting, and MySQL for database management.
+            This website was built with React and utilizes Vercel for Frontend hosting, Render for backend server, and Aiven for MySQL database server
           </p> 
         </div>
 
@@ -151,19 +151,6 @@ const About = () => {
               borderRadius: "0.75rem",
               border: "1px solid rgba(148, 163, 184, 0.1)"
             }}>
-              <div style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "linear-gradient(45deg, #ef4444, #f97316)",
-                margin: "0 auto 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                color: "#fff"
-              }}>YN</div>
               <h3 style={{ margin: "0 0 0.5rem 0", textAlign: "center", color: "#f8fafc" }}>Yaad Nihan</h3>
               <p style={{ 
                 margin: "0 0 1rem 0", 
@@ -177,7 +164,7 @@ const About = () => {
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Set up the backend database as well as the logic for shit.
+                Set up the backend, database as well as the frontend logic.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
               </div>
@@ -190,19 +177,6 @@ const About = () => {
               borderRadius: "0.75rem",
               border: "1px solid rgba(148, 163, 184, 0.1)"
             }}>
-              <div style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "linear-gradient(45deg, #06b6d4, #8b5cf6)",
-                margin: "0 auto 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                color: "#fff"
-              }}>SS</div>
               <h3 style={{ margin: "0 0 0.5rem 0", textAlign: "center", color: "#f8fafc" }}>Samara Sharleez</h3>
               <p style={{ 
                 margin: "0 0 1rem 0", 
@@ -229,19 +203,6 @@ const About = () => {
               borderRadius: "0.75rem",
               border: "1px solid rgba(148, 163, 184, 0.1)"
             }}>
-              <div style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "linear-gradient(45deg, #10b981, #06b6d4)",
-                margin: "0 auto 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                color: "#fff"
-              }}>SU</div>
               <h3 style={{ margin: "0 0 0.5rem 0", textAlign: "center", color: "#f8fafc" }}>Sifat Ullah</h3>
               <p style={{ 
                 margin: "0 0 1rem 0", 
@@ -268,19 +229,6 @@ const About = () => {
               borderRadius: "0.75rem",
               border: "1px solid rgba(148, 163, 184, 0.1)"
             }}>
-              <div style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "linear-gradient(45deg, #f59e0b, #ef4444)",
-                margin: "0 auto 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                color: "#fff"
-              }}>AH</div>
               <h3 style={{ margin: "0 0 0.5rem 0", textAlign: "center", color: "#f8fafc" }}>Aryan Hassan</h3>
               <p style={{ 
                 margin: "0 0 1rem 0", 
@@ -294,7 +242,7 @@ const About = () => {
                 margin: "0 0 1rem 0",
                 fontSize: "0.875rem"
               }}>
-                Set up the frontend and thingamajigs.
+                Set up the frontend.
               </p>
               <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem" }}>
               </div>
