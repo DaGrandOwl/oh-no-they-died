@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDrag } from "react-dnd";
 import { usePlan } from "../contexts/PlanContext";
+import { X } from "lucide-react"; // Add this import
 
 export default function MealCard({
   recipe,
@@ -14,7 +15,10 @@ export default function MealCard({
   onClearHighlight = () => {},
   onServingsChange = null,
   plannerMode = false,
-  minimized = false
+  minimized = false,
+  showRemoveButton = false, // New prop to control remove button visibility
+  onRemove = null, // New prop for remove functionality
+  removeData = null // New prop for remove data (key, index, etc.)
 }) {
   const data = recipe || item;
   const { updateServings } = usePlan();
@@ -137,6 +141,27 @@ export default function MealCard({
   const displayFat = Math.round(((data.fat ?? 0) * scale) * 10) / 10;
 
   // ---- styles (single unified theme) ----
+  const removeButtonStyle = {
+    position: 'absolute',
+    top: 2,
+    right: 5,
+    background: "rgba(239,68,68,0.9)",
+    border: "none",
+    borderRadius: "50%",
+    width: 24,
+    height: 24,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#fff",
+    zIndex: 20,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+    transition: 'all 0.15s ease',
+    opacity: isHovered ? 1 : 0,
+    transform: isHovered ? 'scale(1)' : 'scale(0.8)'
+  };
+
   const containerStyle = {
     borderRadius: isMinimized ? 10 : 12,
     border: isHovered ? "2px solid rgba(139,92,246,0.9)" : "1px solid rgba(148,163,184,0.12)",
@@ -152,7 +177,8 @@ export default function MealCard({
     cursor: "pointer",
     transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
     boxShadow: isHovered ? '0 10px 20px rgba(0,0,0,0.45)' : '0 4px 10px rgba(0,0,0,0.3)',
-    overflow: "hidden"
+    overflow: "hidden",
+    position: 'relative' // Added for absolute positioning of remove button
   };
 
   // image always shown when available; scale down for minimized
@@ -182,6 +208,7 @@ export default function MealCard({
   };
 
   const caloriesStyle = {
+    marginTop: "15px",
     fontWeight: 800,
     fontSize: isMinimized ? 11 : 14,
     color: "#a78bfa"
@@ -266,6 +293,19 @@ export default function MealCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
+           {showRemoveButton && plannerMode && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove && onRemove(removeData);
+          }}
+          style={removeButtonStyle}
+          title="Remove"
+          aria-label={`Remove ${data.name}`}
+        >
+          <X style={{ width: 14, height: 14 }} />
+        </button>
+      )}
       <div style={imageContainerStyle}>
         {hasImage ? (
           <img
@@ -302,21 +342,6 @@ export default function MealCard({
               <div style={servingsContainer}>
                 {compact ? (
                   <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); changeServings(-1); }}
-                      style={servingsButton}
-                      aria-label="Decrease servings"
-                    >
-                      −
-                    </button>
-                    <div style={{ minWidth: 30, textAlign: "center", color: '#f8fafc', fontWeight: '700' }}>{servings}</div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); changeServings(1); }}
-                      style={servingsButton}
-                      aria-label="Increase servings"
-                    >
-                      +
-                    </button>
                   </>
                 ) : (
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>

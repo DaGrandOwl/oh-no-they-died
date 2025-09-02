@@ -136,6 +136,25 @@ export default function RecipeID() {
   const scaledDirections = scaleDirections(recipe.directions, servings, recipe.baseServings, recipe.size, sizeInput, mode);
   const nutrition = scaleNutritionFacts(recipe.nutrition_facts, nutritionServings, recipe.baseServings, recipe.size, nutritionSize, nutritionMode);
 
+     const subtitle = {
+    color: '#94a3b8',
+    fontSize: '1.125rem',
+    margin: 0
+  };
+
+  const title = {
+    fontSize: '2.5rem',
+    fontWeight: '700',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    marginBottom: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
+  };
+  
   const cardStyle = {
     background: 'rgba(30, 41, 59, 0.6)',
     backdropFilter: 'blur(10px)',
@@ -175,14 +194,48 @@ export default function RecipeID() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       color: '#f8fafc',
       padding: '2rem'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Recipe Header Card */}
+        {/* NEW: Utensils Title */}
+        <div style={{ 
+          textAlign: 'center', 
+          marginBottom: '2rem',
+          padding: '1rem'
+        }}>
+          <h1 style={{
+            fontSize: '3rem',
+            fontWeight: 'bold',
+            margin: '0 0 0.5rem 0',
+            background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1rem'
+          }}>
+            <span>🍴</span> Recipe <span></span>
+          </h1>
+        </div>
+
         <div style={cardStyle}>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#e2e8f0',
+            margin: '0 0 0.5rem 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <span>📋</span> {recipe.name} {/*HERE*/}
+          </h2>
+          
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <h1 style={{ 
@@ -232,10 +285,9 @@ export default function RecipeID() {
             gap: '0.5rem'
           }}>
             <span style={{ 
-              background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
               borderRadius: '0.5rem',
               padding: '0.5rem',
-              fontSize: '1rem'
+              fontSize: '1.5rem'
             }}>
               ⚖️
             </span>
@@ -298,10 +350,9 @@ export default function RecipeID() {
               gap: '0.5rem'
             }}>
               <span style={{ 
-                background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
                 borderRadius: '0.5rem',
                 padding: '0.5rem',
-                fontSize: '1rem'
+                fontSize: '1.5rem'
               }}>
                 🥘
               </span>
@@ -355,10 +406,9 @@ export default function RecipeID() {
               gap: '0.5rem'
             }}>
               <span style={{ 
-                background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
                 borderRadius: '0.5rem',
                 padding: '0.5rem',
-                fontSize: '1rem'
+                fontSize: '1.5rem'
               }}>
                 📝
               </span>
@@ -388,10 +438,9 @@ export default function RecipeID() {
             gap: '0.5rem'
           }}>
             <span style={{ 
-              background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
               borderRadius: '0.5rem',
               padding: '0.5rem',
-              fontSize: '1rem'
+              fontSize: '1.5rem'
             }}>
               🎯
             </span>
@@ -449,10 +498,9 @@ export default function RecipeID() {
             gap: '0.5rem'
           }}>
             <span style={{ 
-              background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
               borderRadius: '0.5rem',
               padding: '0.5rem',
-              fontSize: '1rem'
+              fontSize: '1.5rem'
             }}>
               📊
             </span>

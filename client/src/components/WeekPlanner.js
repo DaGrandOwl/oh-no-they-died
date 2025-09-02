@@ -92,8 +92,7 @@ function PlannerCell({
   highlightedRecipe,
   plannerMode = false,
   minimized = false,
-  darkTheme = true,
-  updateServings
+  darkTheme = true
 }) {
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
@@ -201,10 +200,21 @@ function PlannerCell({
           mergedMeals.map((meal, idx) => {
             const key = meal.clientId ? `c-${meal.clientId}` : `m-${meal.id ?? meal.recipeId ?? idx}`;
             const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
-            const sourceIndex = (meal.__sourceIndices && meal.__sourceIndices.length) ? meal.__sourceIndices[0] : null;
+            const rawIndex = meal.__sourceIndices?.[0] ?? meals.findIndex(x => {
+              const getId = y => y.clientId ?? y.serverId ?? y.id ?? y.recipeId;
+              return getId(x) === (meal.clientId ?? meal.serverId ?? meal.id ?? meal.recipeId);
+            });
+
+            const removeData = {
+              key: keyStr,
+              index: rawIndex,
+              serverId: meal.serverId ?? null,
+              clientId: meal.clientId ?? null,
+              recipeId: meal.id ?? meal.recipeId ?? null,
+            };
 
             return (
-              <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <div key={key} style={{ marginBottom: 8 }}>
                 <MealCard
                   item={meal}
                   compact={true}
@@ -215,47 +225,10 @@ function PlannerCell({
                   plannerMode={plannerMode}
                   minimized={minimized}
                   darkTheme={darkTheme}
-                  onServingsChange={async (newServ, mealData) => {
-                    try {
-                      if (typeof updateServings === "function" && sourceIndex !== null) {
-                        await updateServings(keyStr, sourceIndex, newServ);
-                      } else if (typeof updateServings === "function") {
-                        const matcher = {
-                          clientId: meal.clientId ?? mealData?.clientId ?? null,
-                          serverId: meal.serverId ?? mealData?.serverId ?? null,
-                          recipeId: meal.recipeId ?? meal.id ?? mealData?.recipeId ?? mealData?.id ?? null
-                        };
-                        await updateServings(keyStr, matcher, newServ);
-                      }
-                    } catch (err) {
-                      console.warn("Failed to persist servings change", err);
-                      toast.error("Failed to save servings change");
-                    }
-                  }}
+                  showRemoveButton={true} // Enable remove button
+                  onRemove={onRemove} // Pass remove handler
+                  removeData={removeData} // Pass remove data
                 />
-                <button
-                  onClick={() => {
-                    const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
-                    const rawIndex =
-                      meal.__sourceIndices?.[0] ??
-                      meals.findIndex(x => {
-                        const getId = y => y.clientId ?? y.serverId ?? y.id ?? y.recipeId;
-                        return getId(x) === (meal.clientId ?? meal.serverId ?? meal.id ?? meal.recipeId);
-                      });
-
-                    onRemove && onRemove({
-                      key: keyStr,
-                      index: rawIndex,
-                      serverId: meal.serverId ?? null,
-                      clientId: meal.clientId ?? null,
-                      recipeId: meal.id ?? meal.recipeId ?? null,
-                    });
-                  }}
-                  style={removeButtonStyle}
-                  title="Remove"
-                >
-                  <X style={{ width: 14, height: 14 }} />
-                </button>
               </div>
             );
           })
