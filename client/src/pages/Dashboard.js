@@ -8,6 +8,150 @@ import { useAuth } from "../contexts/AuthContext";
 import MealCard from "../components/MealCard";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Home } from "lucide-react";
+
+const styles = {
+  container: {
+    minHeight: '100vh',
+    padding: '2rem',
+    color: '#f8fafc'
+  },
+  header: {
+    marginBottom: '2rem'
+  },
+  title: {
+    fontSize: '2.5rem',
+    fontWeight: 'bold', 
+    margin: '0 0 0.5rem 0',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
+  },
+  subtitle: {
+    fontSize: '1.125rem', 
+    color: '#94a3b8', 
+    margin: '0 0 1rem 0',
+    fontWeight: 'normal'
+  },
+  searchContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    marginBottom: '1rem'
+  },
+  searchInputContainer: {
+    position: 'relative',
+    flex: 1,
+    maxWidth: '500px'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '1rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#94a3b8',
+    pointerEvents: 'none'
+  },
+  resultInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    color: '#94a3b8',
+    fontSize: '0.875rem'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse'
+  },
+  tableHeader: {
+    background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.1))',
+    borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  categoryHeader: {
+    padding: '1.5rem',
+    fontSize: '1.125rem',
+    fontWeight: '600',
+    color: '#a78bfa',
+    textAlign: 'center',
+    borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  columnHeader: {
+    padding: '1rem',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: '#e2e8f0',
+    textAlign: 'left',
+    borderRight: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  row: {
+    borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  cell: {
+    padding: '1rem',
+    borderRight: '1px solid rgba(148, 163, 184, 0.05)',
+    color: '#e2e8f0',
+    verticalAlign: 'middle'
+  },
+  imageCell: {
+    padding: '0.75rem',
+    width: '120px'
+  },
+  recipeImage: {
+    width: '100px',
+    height: '70px',
+    objectFit: 'cover',
+    borderRadius: '0.5rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)'
+  },
+  noImage: {
+    width: '100px',
+    height: '70px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: '0.5rem',
+    border: '1px solid rgba(148, 163, 184, 0.1)',
+    color: '#a78bfa'
+  },
+  recipeName: {
+    fontWeight: '500',
+    fontSize: '1rem'
+  },
+  nutritionValue: {
+    textAlign: 'center',
+    fontWeight: '500',
+    fontSize: '0.875rem'
+  },
+  emptyState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#94a3b8'
+  },
+  loadingState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#94a3b8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1rem'
+  },
+  errorState: {
+    padding: '3rem',
+    textAlign: 'center',
+    color: '#f87171',
+    background: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: '0.75rem',
+    border: '1px solid rgba(239, 68, 68, 0.2)'
+  }
+};
 
 function confirmToast(message, onConfirm, options = {}) {
   toast.warn(
@@ -195,18 +339,15 @@ export default function Dashboard() {
     <DndProvider backend={HTML5Backend}>
       <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
         <ToastContainer position="top-right" />
-        <main style={{ flex: 1, minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)', fontFamily:'system-ui, -apple-system, sans-serif', color: '#f8fafc', padding: '2rem' }}>
+        <main style={{ flex: 1, minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', fontFamily:'system-ui, -apple-system, sans-serif', color: '#f8fafc', padding: '2rem' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <h1 style={{ fontSize:'2.5rem', fontWeight:'bold', margin: '0 0 0.5rem 0', background:'linear-gradient(45deg,#8b5cf6,#06b6d4)', backgroundClip:'text', WebkitBackgroundClip:'text', color:'transparent' }}>
-                    Recipe Recommendations
-                  </h1>
-                  <p style={{ fontSize: '1.125rem', color:'#94a3b8', margin: 0 }}>Discover and plan your next meal</p>
+                    <h1 style={styles.title}>
+                      <Home style={{ width: '2.5rem', height: '2.5rem', color: '#8b5cf6' }} />
+                      Dashboard
+                    </h1>
+                    <p style={styles.subtitle} >Discover and plan your next meal</p>
                 </div>
-              </div>
-            </div>
 
             {/* Top grid: Filters (left) and Results (right) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
