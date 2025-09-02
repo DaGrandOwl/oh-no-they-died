@@ -183,7 +183,6 @@ export default function InventoryPage() {
     gap: '0.5rem',
     padding: '0.5rem 1rem',
     borderRadius: '0.5rem',
-    border: 'none',
     cursor: 'pointer',
     transition: 'all 0.2s',
     fontSize: '0.875rem',
