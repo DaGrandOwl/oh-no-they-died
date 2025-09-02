@@ -47,7 +47,7 @@ export default function Dashboard() {
   const [filters, setFilters] = useState({
     cuisine: "",
     mealType: "",
-    dietType: "",
+    dietType: prefs?.diet_type ?? "any",
     maxCalories: "",
     minCarbs: "",
     minProtein: "",
@@ -59,7 +59,7 @@ export default function Dashboard() {
   const initialFilters = {
     cuisine: "",
     mealType: "",
-    dietType: "",
+    dietType: prefs?.diet_type ?? "any",
     maxCalories: "",
     minCarbs: "",
     minProtein: "",
@@ -80,7 +80,7 @@ export default function Dashboard() {
       const params = {};
       if (filters.cuisine && String(filters.cuisine).trim() !== "") params.cuisine = filters.cuisine;
       if (filters.mealType && String(filters.mealType).trim() !== "") params.mealType = filters.mealType;
-      if (filters.dietType && String(filters.dietType).trim() !== "") params.dietType = filters.dietType;
+      if (filters.dietType && String(filters.dietType).trim() !== "" && filters.dietType !== "any") params.dietType = filters.dietType;
       if (filters.maxCalories !== "" && filters.maxCalories != null) params.calories = filters.maxCalories;
       if (filters.minCarbs !== "" && filters.minCarbs != null) params.carbs = filters.minCarbs;
       if (filters.minProtein !== "" && filters.minProtein != null) params.protein = filters.minProtein;
@@ -164,9 +164,7 @@ export default function Dashboard() {
   const clearAll = () => { setFilters({ ...initialFilters }); setResults([]); };
 
   const handleRemove = useCallback(async ({ key, index, serverId, clientId, recipeId }) => {
-    // wrapper so the planner can call onRemove and we call removeMeal()
     try {
-      // try to remove, removeMeal expects { key, index, serverId } in your codebase
       await removeMeal({ key, index, serverId });
       toast.info("Removed from plan");
     } catch (err) {
@@ -175,6 +173,7 @@ export default function Dashboard() {
     }
   }, [removeMeal]);
 
+  // Styles...
   const cardStyle = { background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(10px)', borderRadius:'1rem', border:'1px solid rgba(148,163,184,0.1)', padding:'1.5rem', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.1)', marginBottom: '1rem' };
   const inputStyle = { padding:'0.75rem 1rem', background:'rgba(30,41,59,0.8)', border:'1px solid rgba(148,163,184,0.2)', borderRadius:'0.5rem', color:'#f8fafc', fontSize:'0.875rem', outline:'none' };
   const selectStyle = { ...inputStyle, cursor: 'pointer' };
@@ -219,7 +218,13 @@ export default function Dashboard() {
 
                   <div style={{ display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                     <input type="number" placeholder="Max Calories" value={filters.maxCalories} onChange={e => handleFilterChange("maxCalories", e.target.value)} style={inputStyle} />
-                    <div><select value={filters.maxCost ?? 3} onChange={e => handleFilterChange("maxCost", Number(e.target.value))} style={selectStyle}><option value={3}>$$$ (Premium)</option><option value={2}>$$ (Moderate)</option><option value={1}>$ (Budget)</option></select></div>
+                    <div>
+                      <select value={filters.maxCost ?? 3} onChange={e => handleFilterChange("maxCost", Number(e.target.value))} style={selectStyle}>
+                        <option value={3}>$$$ (Premium)</option>
+                        <option value={2}>$$ (Moderate)</option>
+                        <option value={1}>$ (Budget)</option>
+                      </select>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <label style={{ display:'flex', alignItems:'center', gap: 8, fontSize: '0.875rem', color:'#e2e8f0', cursor:'pointer' }}>
                         <input type="checkbox" checked={filters.inventoryMatch} onChange={e => handleFilterChange("inventoryMatch", e.target.checked)} style={{ accentColor: '#8b5cf6' }} />
@@ -230,8 +235,23 @@ export default function Dashboard() {
 
                   <div style={{ display:'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap:'1rem', marginBottom: '1.5rem' }}>
                     <input placeholder="Cuisine" value={filters.cuisine} onChange={e => handleFilterChange("cuisine", e.target.value)} style={inputStyle} />
-                    <select value={filters.mealType} onChange={e => handleFilterChange("mealType", e.target.value)} style={selectStyle}><option value="">Any meal type</option><option value="Breakfast">Breakfast</option><option value="Lunch">Lunch</option><option value="Dinner">Dinner</option><option value="Snacks">Snacks</option></select>
-                    <input placeholder="Diet type (keto/vegan...)" value={filters.dietType} onChange={e => handleFilterChange("dietType", e.target.value)} style={inputStyle} />
+
+                    <select value={filters.mealType} onChange={e => handleFilterChange("mealType", e.target.value)} style={selectStyle}>
+                      <option value="">Any meal type</option>
+                      <option value="Breakfast">Breakfast</option>
+                      <option value="Lunch">Lunch</option>
+                      <option value="Dinner">Dinner</option>
+                      <option value="Snacks">Snacks</option>
+                    </select>
+
+                    <select value={filters.dietType} onChange={e => handleFilterChange("dietType", e.target.value)} style={selectStyle}>
+                      <option value="any">Any diet type</option>
+                      <option value="vegan">Vegan</option>
+                      <option value="vegetarian">Vegetarian</option>
+                      <option value="keto">Keto</option>
+                      <option value="paleo">Paleo</option>
+                      <option value="low_carb">Low Carb</option>
+                    </select>
                   </div>
 
                   <div style={{ display:'flex', gap: '1rem' }}>
@@ -255,7 +275,7 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       {results.map(r => (
                         <div key={r.id}>
-                          <MealCard recipe={r} compact={false} hideImage={false} darkTheme={true} onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)} onClearHighlight={() => clearHighlight()} />
+                          <MealCard recipe={r} compact={false} hideImage={false} onStartHighlight={(recipeWithServings) => startHighlight(recipeWithServings)} onClearHighlight={() => clearHighlight()} />
                           {typeof r.match_pct === "number" && <div style={{ fontSize:'0.75rem', color:'#a78bfa', marginTop:8 }}>Inventory match: {Math.round(r.match_pct)}%</div>}
                         </div>
                       ))}
@@ -279,7 +299,6 @@ export default function Dashboard() {
                   dateForWeekday={(weekday) => nextDateForWeekday(weekday)}
                   plannerMode={true}
                   minimized={true}
-                  darkTheme={true}
                 />
 
                 <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#94a3b8', padding: '0.75rem', background:'rgba(139,92,246,0.05)', borderRadius: 8 }}>

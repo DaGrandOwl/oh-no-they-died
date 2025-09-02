@@ -5,7 +5,7 @@ function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <p>Loading...</p>; // or a spinner
+    return <p>Loading...</p>;
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;

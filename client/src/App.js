@@ -12,6 +12,7 @@ import Inventory from './pages/Inventory.js';
 import Settings from './pages/Settings.js';
 // Components
 import PrivateRoute from './components/PrivateRoute';
+import UnauthenticatedRoute from './components/UnauthenticatedRoute.js';
 import Layout from './components/Layout.js';
 
 function App() {
@@ -20,8 +21,12 @@ function App() {
         <Routes>
           <Route path="/" element={<StartPage />} />
           <Route path="/about" element={<About />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+
+          {/* Only for users not logged in*/}
+          <Route element={<UnauthenticatedRoute />} >
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Route>
           
           {/* Logged in users only */}
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}> 

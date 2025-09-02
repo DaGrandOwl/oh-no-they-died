@@ -16,37 +16,16 @@ export function PrefProvider({ children }) {
     }
   })();
 
-  // default theme: prefer system preference if no saved prefs
-  const systemPrefersDark =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
-
   const defaultPrefs = {
-    theme: systemPrefersDark ? "dark" : "light",
     allergens: [],
-    user_inventory: false,
-    diet_type: null,
+    user_inventory: true,
+    diet_type: "any",
     lastUpdated: new Date().toISOString(),
   };
 
   const [prefs, setPrefs] = useState(() => {
     return initialFromStorage ? { ...defaultPrefs, ...initialFromStorage } : defaultPrefs;
   });
-
-  // apply theme to document root whenever prefs.theme changes
-  useEffect(() => {
-    if (!prefs) return;
-    const theme = prefs.theme === "dark" ? "dark" : "light";
-    try {
-      // set data attribute and class for CSS hooks
-      document.documentElement.setAttribute("data-theme", theme);
-      if (theme === "dark") document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-    } catch (e) {
-      // ignore in SSR or restricted environments
-    }
-  }, [prefs, prefs?.theme]);
 
   // Sync with DB if logged in and DB prefs are newer
   useEffect(() => {
@@ -75,6 +54,7 @@ export function PrefProvider({ children }) {
           setPrefs(merged);
         }
       } catch (err) {
+        // non-fatal: keep local prefs
         console.error("Failed to fetch preferences:", err);
       }
     })();
@@ -93,15 +73,21 @@ export function PrefProvider({ children }) {
       localStorage.setItem("preferences", JSON.stringify(merged));
     } catch {}
 
-    // Update DB only if user is logged in
     if (token) {
+      // Send only the relevant DB fields
+      const payload = {
+        diet_type: merged.diet_type ?? "any",
+        allergens: Array.isArray(merged.allergens) ? merged.allergens : (merged.allergens ? [merged.allergens] : []),
+        user_inventory: !!merged.user_inventory,
+        lastUpdated: merged.lastUpdated
+      };
       fetch(`${process.env.REACT_APP_API_URL}/api/user/preferences`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(merged), 
+        body: JSON.stringify(payload),
       }).catch(() => {
         // DB update failed; local prefs still intact
       });
