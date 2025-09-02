@@ -20,6 +20,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<StartPage />} />
+          <Route path='/home' element={<StartPage />} />
           <Route path="/about" element={<About />} />
 
           {/* Only for users not logged in*/}

@@ -303,7 +303,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Bottom: Weekly planner across full width */}
             <div style={{ marginTop: '1.5rem' }}>
               <div style={cardStyle}>
                 <h3 style={{ fontSize:'1.25rem', fontWeight:600, marginBottom: '1rem' }}>📅 Weekly Planner</h3>
@@ -326,7 +325,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-
           </div>
         </main>
       </div>
