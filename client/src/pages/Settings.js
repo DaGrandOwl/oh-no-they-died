@@ -23,21 +23,24 @@ const settingsStyles = {
   },
   header: {
     marginBottom: "2rem",
-    textAlign: "center",
+    textAlign: "left",
   },
   title: {
-    fontSize: "2.5rem",
-    fontWeight: "800",
-    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
-    backgroundClip: "text",
-    WebkitBackgroundClip: "text",
-    color: "transparent",
-    margin: "0 0 0.5rem 0",
+    fontSize: '2.5rem',
+    fontWeight: '700',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    marginBottom: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
   },
   subtitle: {
-    color: "#cbd5e1",
-    fontSize: "1.125rem",
-    margin: 0,
+    color: '#94a3b8',
+    fontSize: '1.125rem',
+    margin: 0
   },
   settingsCard: {
     ...cardStyle,

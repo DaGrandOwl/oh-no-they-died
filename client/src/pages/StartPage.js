@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Star, Heart, Clock, Users } from "lucide-react";
+import { Star, Heart, Clock, Users, SquareArrowOutUpRight, ChevronRight } from "lucide-react";
 import { buttonPrimary, cardStyle } from "../components/Styles";
+import logo from '../components/logo.png';
 
 const StartPage = () => {
   const navigate = useNavigate();
@@ -98,7 +99,6 @@ const StartPage = () => {
           <div style={{
             width: "2.5rem",
             height: "2.5rem",
-            background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
             borderRadius: "0.75rem",
             display: "flex",
             alignItems: "center",
@@ -106,15 +106,12 @@ const StartPage = () => {
             fontSize: "1.125rem",
             fontWeight: "bold",
             color: "#fff",
-          }}>MP</div>
+          }}><img src={logo} width={75} height={75} alt='MP' /></div>
           <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700" }}>Meal Planner</h1>
         </div>
         
-        <button 
-          style={buttonPrimary}
-          onClick={() => navigate("/login")}
-        >
-          Get Started <ChevronRight size={16} />
+        <button style={buttonPrimary} onClick={() => navigate("/about")}>
+          <SquareArrowOutUpRight style={{ width: "1rem", height: "1rem" }} />
         </button>
       </header>
 
@@ -175,6 +172,8 @@ const StartPage = () => {
       </section>
 
       {/* Top paragraph */}
+        <button style={buttonPrimary} onClick={() => navigate("/login")}> Get Started <ChevronRight size={16} />
+        </button>
       <div style={{
         textAlign: "center",
         margin: "0 auto 4rem",

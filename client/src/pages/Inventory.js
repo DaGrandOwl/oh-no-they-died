@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { RefreshCw, AlertTriangle, Package, PlusCircle } from "lucide-react";
+import { RefreshCw, AlertTriangle, Package, PlusCircle, Croissant } from "lucide-react";
 
 function titleCase(s) {
   if (!s) return s;
@@ -128,10 +128,28 @@ export default function InventoryPage() {
   // Styling constants
   const pageStyle = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #164e63 100%)',
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     color: '#f8fafc',
     padding: '2rem'
+  };
+   const subtitle = {
+    color: '#94a3b8',
+    fontSize: '1.125rem',
+    margin: 0
+  };
+
+  const title = {
+    fontSize: '2.5rem',
+    fontWeight: '700',
+    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    marginBottom: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
   };
 
   const cardStyle = {
@@ -240,12 +258,11 @@ export default function InventoryPage() {
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
-            My Inventory
-          </h2>
-          <p style={{ fontSize: '1rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
-            Manage your ingredients and track upcoming usage
-          </p>
+        <h1 style={title}>
+          <Croissant style={{ width: '2.5rem', height: '2.5rem', color: '#8b5cf6' }} />
+          My Inventory
+        </h1>
+        <p style={subtitle}>Manage your ingredients and track upcoming usage</p>
         </div>
         <button 
           onClick={fetchAll} 

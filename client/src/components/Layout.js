@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from "react-router-dom";
+import logo from '../components/logo.png';
 import {
   Croissant,
   Utensils,
@@ -33,7 +34,6 @@ const sidebarStyles = {
   logo: {
     width: "2.5rem",
     height: "2.5rem",
-    background: "linear-gradient(45deg, #8b5cf6, #06b6d4)",
     borderRadius: "0.75rem",
     display: "flex",
     alignItems: "center",
@@ -104,7 +104,7 @@ const Layout = () => {
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside style={sidebarStyles.sidebar}>
         <div style={sidebarStyles.brand}>
-          <div style={sidebarStyles.logo}>MP</div>
+          <div style={sidebarStyles.logo}><img src={logo} width={75} height={75} alt='MP' /></div>
           <div>
             <div style={sidebarStyles.brandText}>Meal Planner</div>
             <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
