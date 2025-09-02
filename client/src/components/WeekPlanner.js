@@ -1,5 +1,4 @@
 import { useMemo, useState, useCallback, useEffect } from "react"; 
-import { X } from "lucide-react";
 import { useDrop } from "react-dnd";
 import { toast } from "react-toastify";
 import { usePreferences } from "../contexts/PrefContext";
@@ -152,32 +151,6 @@ function PlannerCell({
     position: 'relative',
     overflow: 'visible',
     minWidth: '180px'
-  };
-
-  const removeButtonStyle = darkTheme ? {
-    background: "rgba(239,68,68,0.2)",
-    border: "1px solid rgba(239,68,68,0.3)",
-    borderRadius: "50%",
-    width: 28,
-    height: 28,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#f87171",
-    marginLeft: 8
-  } : {
-    background: "rgba(239,68,68,0.12)",
-    border: "none",
-    borderRadius: "50%",
-    width: 28,
-    height: 28,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#ef4444",
-    marginLeft: 8
   };
   
   return (

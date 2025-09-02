@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { data, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 //Parse and scale ingredients
 function scaleIngredients(ingredients, servings, baseServings, size, selectedSize, mode) {
@@ -137,24 +137,6 @@ export default function RecipeID() {
   const scaledDirections = scaleDirections(recipe.directions, servings, recipe.baseServings, recipe.size, sizeInput, mode);
   const nutrition = scaleNutritionFacts(recipe.nutrition_facts, nutritionServings, recipe.baseServings, recipe.size, nutritionSize, nutritionMode);
 
-     const subtitle = {
-    color: '#94a3b8',
-    fontSize: '1.125rem',
-    margin: 0
-  };
-
-  const title = {
-    fontSize: '2.5rem',
-    fontWeight: '700',
-    background: 'linear-gradient(45deg, #8b5cf6, #06b6d4)',
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    color: 'transparent',
-    marginBottom: '0.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem'
-  };
   
   const cardStyle = {
     background: 'rgba(30, 41, 59, 0.6)',
@@ -411,7 +393,11 @@ export default function RecipeID() {
               lineHeight: '1.6',
               color: '#e2e8f0'
             }}>
-              {scaledDirections}
+              {scaledDirections.split(/\d+\.\s/).filter(Boolean).map((step, idx) => (
+                <p key={idx} style={{ marginBottom: '0.75rem' }}>
+                  {idx + 1}. {step.trim()}
+                </p>
+              ))}
             </div>
           </div>
         </div>

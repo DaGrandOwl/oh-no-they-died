@@ -181,13 +181,6 @@ const StartPage = () => {
         position: "relative",
         zIndex: 10
       }}>
-        <p style={{
-          fontSize: "1.125rem",
-          lineHeight: "1.7",
-          color: "#e2e8f0"
-        }}>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-        </p>
       </div>
 
       {/* Three column section with offset */}
@@ -209,7 +202,7 @@ const StartPage = () => {
         }}>
           <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Weekly Planner</h3>
           <p style={{ color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+            A simple, user-friendly interface with drag-and-drop capabilities to plan out breakfast, lunch, dinner and snacks for each day of the week.
           </p>
         </div>
 
@@ -220,7 +213,7 @@ const StartPage = () => {
         }}>
           <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Recipe Library</h3>
           <p style={{ color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            A library of diverse recipes with filtering options based on dietary preferences, ensuring there's something for everyone.
           </p>
         </div>
 
@@ -233,7 +226,7 @@ const StartPage = () => {
         }}>
           <h3 style={{ margin: "0 0 1rem 0", color: "#a78bfa" }}>Inventory Management</h3>
           <p style={{ color: "#cbd5e1", lineHeight: "1.6", margin: 0 }}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+            A system to automatically track ingredients to provide an intuitive shopping list to notify users of what to add to their shopping list.
           </p>
         </div>
       </div>
@@ -249,9 +242,9 @@ const StartPage = () => {
         <p style={{
           fontSize: "1.125rem",
           lineHeight: "1.7",
-          color: "#e2e8f0"
+          color: "#94a3b8"
         }}>
-          Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+          Made by the oh-no-they-died team for STS'25.
         </p>
       </div>
     </div>
