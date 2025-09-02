@@ -3,7 +3,7 @@ import fp from "fastify-plugin";
 export default fp(async function(fastify) {
   const db = fastify.db;
 
-  // GET recipe ingredients + base_servings (joins recipe_instructions)
+  // GET recipe ingredients + base_servings
   fastify.get("/api/recipes/:id/ingredients", async (request, reply) => {
     const recipeId = Number(request.params.id);
     if (!recipeId) return reply.code(400).send({ error: "Invalid recipe ID" });
@@ -27,7 +27,7 @@ export default fp(async function(fastify) {
   // GET known ingredients (used for not-in-inventory)
   fastify.get("/api/ingredients", async (request, reply) => {
     try {
-      // master list is indexed by user_id = 0
+      // ingredient list is stored in recipe_id = 0
       const [rows] = await fastify.db.query(
         `SELECT DISTINCT item_name, unit FROM recipe_ingredients WHERE recipe_id = 0 AND item_name IS NOT NULL AND item_name <> '' ORDER BY item_name ASC`
       );
@@ -39,7 +39,7 @@ export default fp(async function(fastify) {
     }
   });
 
-  // GET user inventory (returns all items for logged-in user)
+  // GET user inventory (used for in-inventory)
   fastify.get("/api/user/inventory", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.id;
     try {
@@ -54,7 +54,7 @@ export default fp(async function(fastify) {
     }
   });
 
-  // POST adjust user inventory (batch)
+  // POST adjust user inventory
   fastify.post("/api/user/inventory/adjust", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.id;
     const { adjustments } = request.body;
@@ -75,9 +75,8 @@ export default fp(async function(fastify) {
         const delta = Number(adj.delta || 0);
         const unit = adj.unit || null;
 
-        if (!item_name) continue; // skip invalid
+        if (!item_name) continue;
 
-        // Try to find existing inventory row (match by item_name + unit)
         const [rows] = await conn.query(
           "SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1",
           [userId, item_name, unit, unit]
@@ -86,12 +85,10 @@ export default fp(async function(fastify) {
         if (rows.length > 0) {
           const row = rows[0];
           let newQty = Number(row.quantity || 0) + delta;
-          // ensure non-null numeric; allow negative to indicate shortage
           if (!Number.isFinite(newQty)) newQty = 0;
           await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, row.id]);
           touchedNames.add(item_name);
         } else {
-          // Insert a new row with the delta (can be negative to show shortage)
           await conn.query("INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)", [userId, item_name, delta, unit]);
           touchedNames.add(item_name);
         }
@@ -99,7 +96,6 @@ export default fp(async function(fastify) {
 
       await conn.commit();
 
-      // Return updated rows for touched items so client can update local UI and detect negatives
       const namesArr = Array.from(touchedNames);
       let updated = [];
       if (namesArr.length > 0) {

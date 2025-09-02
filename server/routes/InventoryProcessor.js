@@ -11,7 +11,6 @@ export default fp(async function (fastify, opts) {
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
-      // Lock/select pending change rows (applied_at IS NULL) for the date
       const [rows] = await conn.query(
         `SELECT id, user_id, mealplan_id, item_name, delta, unit
          FROM user_inventory_changes
@@ -25,8 +24,7 @@ export default fp(async function (fastify, opts) {
         return { appliedCount: 0, message: "No pending inventory changes for date", date: dateStr };
       }
 
-      // Aggregate deltas by user_id + item_name + unit
-      const groups = new Map(); // key -> { userId, itemName, unit, totalDelta, changeIds[] }
+      const groups = new Map();
       for (const r of rows) {
         const userId = Number(r.user_id);
         const itemName = String(r.item_name).trim();
@@ -50,14 +48,11 @@ export default fp(async function (fastify, opts) {
       const appliedChangeIds = [];
       const perUserSummary = {};
 
-      // For each aggregated group, apply change to user_inventory
       for (const [k, g] of groups.entries()) {
         const { userId, itemName, unit, totalDelta, changeIds } = g;
 
-        // Ensure per-user summary object exists
         perUserSummary[userId] = perUserSummary[userId] || { applied: 0, deltas: [] };
 
-        // SELECT FOR UPDATE existing inventory row for this user/item/unit
         const [invRows] = await conn.query(
           `SELECT id, quantity 
            FROM user_inventory 
@@ -75,14 +70,12 @@ export default fp(async function (fastify, opts) {
             [newQty, invRow.id]
           );
         } else {
-          // Insert a new row (delta may be negative indicating shortage)
           await conn.query(
             `INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)`,
             [userId, itemName, totalDelta, unit]
           );
         }
 
-        // mark the associated change rows as applied
         const placeholders = changeIds.map(() => "?").join(",");
         await conn.query(
           `UPDATE user_inventory_changes

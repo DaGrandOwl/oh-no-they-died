@@ -10,5 +10,5 @@ function PrivateRoute({ children }) {
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
-
+// Only allows logged in users to access certain routes
 export default PrivateRoute;

@@ -3,110 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferences } from '../contexts/PrefContext';
 
-export default function Register() {
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const { login } = useAuth();
-  const { updatePrefs } = usePreferences();
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    const { username, email, password } = form;
-    if (!username || !email || !password) {
-      setError('All fields are required.');
-      return;
-    }
-
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/register`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(form)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Registration failed');
-        return;
-      }
-
-      // Auto-login
-      localStorage.setItem('token', data.token);
-
-      // Initialize empty preferences with timestamp
-      const initialPrefs = { lastUpdated: new Date().toISOString() };
-      updatePrefs(initialPrefs);
-      localStorage.setItem('preferences', JSON.stringify(initialPrefs));
-
-      // Update Auth Context
-      login({ id: data.user.id, email: data.user.email }, data.token);
-
-      navigate('/onboarding');
-    } catch (err) {
-      console.error(err);
-      setError('Server error. Please try again later.');
-    }
-  };
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Create Account</h2>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>Username</label>
-          <input
-            name="username"
-            placeholder="Enter username"
-            value={form.username}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-
-          <label style={styles.label}>Email</label>
-          <input
-            name="email"
-            placeholder="Enter email"
-            value={form.email}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-
-          <label style={styles.label}>Password</label>
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter password"
-            value={form.password}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-
-          {error && <p style={styles.error}>{error}</p>}
-
-          <button type="submit" style={styles.button}>Register</button>
-        </form>
-        <p style={styles.loginText}>
-          Already have an account? <a href="/login" style={styles.link}>Login</a>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 const styles = {
   container: {
     height: '100vh',
@@ -179,3 +75,106 @@ const styles = {
     textDecoration: 'none'
   }
 };
+
+export default function Register() {
+  const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const { login } = useAuth();
+  const { updatePrefs } = usePreferences();
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const { username, email, password } = form;
+    if (!username || !email || !password) {
+      setError('All fields are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(form)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+      // Auto-login
+      localStorage.setItem('token', data.token);
+
+      // Initialize empty preferences
+      const initialPrefs = { lastUpdated: new Date().toISOString() };
+      updatePrefs(initialPrefs);
+      localStorage.setItem('preferences', JSON.stringify(initialPrefs));
+
+      login({ id: data.user.id, email: data.user.email, hasOnboarded: false },data.token);
+
+      navigate('/onboarding');
+    
+    } catch (err) {
+      console.error(err);
+      setError('Server error. Please try again later.');
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>Create Account</h2>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <label style={styles.label}>Username</label>
+          <input
+            name="username"
+            placeholder="Enter username"
+            value={form.username}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+
+          <label style={styles.label}>Email</label>
+          <input
+            name="email"
+            placeholder="Enter email"
+            value={form.email}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+
+          <label style={styles.label}>Password</label>
+          <input
+            type="password"
+            name="password"
+            placeholder="Enter password"
+            value={form.password}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+
+          {error && <p style={styles.error}>{error}</p>}
+
+          <button type="submit" style={styles.button}>Register</button>
+        </form>
+        <p style={styles.loginText}>
+          Already have an account? <a href="/login" style={styles.link}>Login</a>
+        </p>
+      </div>
+    </div>
+  );
+}

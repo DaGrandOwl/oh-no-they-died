@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Check, Utensils, Settings, Heart, Package, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Utensils, Settings, Heart, Package } from "lucide-react";
 import { usePreferences } from "../contexts/PrefContext";
+
+//Page does not set hasOnboarded=True when completed. Not addressed due to no major issues caused
 
 const styles = {
   container: {
@@ -593,7 +595,7 @@ export default function OnboardingFlow() {
               </span>
             </div>
             <div style={styles.summaryItem}>
-              <span style={styles.summaryLabel}>Inventory Tracking:</span>
+              <span style={styles.summaryLabel}>Pantry Tracking:</span>
               <span style={styles.summaryValue}>
                 {settings.inventory ? "Enabled" : "Disabled"}
               </span>

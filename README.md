@@ -4,9 +4,16 @@ A full-stack **meal planning and inventory management web app** that helps users
 
 This project was built for Scholastica Tech Summit'25 for 'Innovator's Arena' segment
 
-View the page on **https://oh-no-they-died.vercel.app**
+View the webpage on **https://oh-no-they-died.vercel.app**
 
-(.env files needed to run locally have not been shared on this repository)
+For demo account, use email "demo@test" with password "demo". Demo example: <br>
+1) Try searching through Dashboard page recommendations for a Breakfast meal over 200 calories 
+2) Add found result to Thursday Breakfast
+3) Check what ingredient you may run out in a week using Pantry page
+4) Say you want a 'pancake' recipe specifically, search for it through recipes page. Click on it to view full page.
+
+(Database has been filled with limited entries to give a demo only)<br>
+(.env files needed to run locally have not been shared on this repository since website includes all functionalities)
 
 ---
 

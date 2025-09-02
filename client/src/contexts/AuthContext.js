@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // On refresh, restore token and user if available
+    //On refresh, set token and user if available
     const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     if (storedToken) {setToken(storedToken)};

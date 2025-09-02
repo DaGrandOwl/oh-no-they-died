@@ -1,4 +1,3 @@
-// PlanContext.js (updated)
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "react-toastify";
@@ -9,6 +8,7 @@ function safeParseJSON(s, fallback = {}) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
+//Local-only has been depricated also
 function loadLocalPlan() {
   try {
     const raw = safeParseJSON(localStorage.getItem("mealPlan") || "{}", {});
@@ -61,7 +61,6 @@ function parseTime(s) {
   return Number.isNaN(t) ? 0 : t;
 }
 
-/* inventory helpers (local backup + server sync) */
 function loadLocalInventory() { return safeParseJSON(localStorage.getItem("inventory") || "{}", {}); }
 function saveLocalInventory(inv) { try { localStorage.setItem("inventory", JSON.stringify(inv)); } catch {} }
 function readPrefsLocal() { try { return safeParseJSON(localStorage.getItem("preferences") || "{}", {}); } catch { return {}; } }
@@ -73,8 +72,6 @@ export function PlanProvider({ children }) {
   const [inventory, setInventory] = useState(() => loadLocalInventory());
 
   useEffect(() => { saveLocalInventory(inventory); }, [inventory]);
-
-  // helper: add locally and persist
   const addLocal = useCallback((key, entry) => {
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
@@ -85,27 +82,21 @@ export function PlanProvider({ children }) {
     });
   }, []);
 
-  // merge server rows into local plan (used by syncRange)
   const mergeServerIntoLocal = useCallback((serverRows) => {
     setPlan((prevLocal) => {
       const next = { ...prevLocal };
       const normalizedServer = {};
 
       (Array.isArray(serverRows) ? serverRows : []).forEach((r) => {
-        // r is expected to be a mealplan row returned by GET /api/user/mealplan
-        // r.id = user_mealplan.id
         const date = r.date;
         const mealType = (r.mealType || r.meal_type || "unknown").toString().toLowerCase();
         const key = `${date}-${mealType}`;
         normalizedServer[key] = normalizedServer[key] || [];
 
         const mapped = {
-          // canonical server-side mealplan identifier:
           serverId: r.id ?? null,
           mealplanId: r.id ?? r.mealplanId ?? null,
-          // recipe id (the recipe this mealplan row points to)
           recipeId: r.recipeId ?? r.recipe_id ?? null,
-          // user-facing recipe metadata (safely copy)
           name: r.name ?? r.title ?? null,
           image: r.image ?? null,
           calories: r.calories ?? null,
@@ -123,13 +114,11 @@ export function PlanProvider({ children }) {
         normalizedServer[key].push(mapped);
       });
 
-      // For each server key, merge server items into local arrays (server has priority for authoritative state)
       Object.keys(normalizedServer).forEach((key) => {
         const serverItems = normalizedServer[key];
         const localItems = Array.isArray(next[key]) ? [...next[key]] : [];
 
         serverItems.forEach((sItem) => {
-          // match by serverId first, then by recipeId (best-effort)
           const idxByServerId = localItems.findIndex(li => li.serverId && sItem.serverId && String(li.serverId) === String(sItem.serverId));
           const idxByClientId = localItems.findIndex(li => li.clientId && sItem.clientId && String(li.clientId) === String(sItem.clientId));
           const idxByRecipe = localItems.findIndex(li => (li.recipeId || li.id) && (sItem.recipeId || sItem.id) && String(li.recipeId || li.id) === String(sItem.recipeId || sItem.id));
@@ -140,13 +129,11 @@ export function PlanProvider({ children }) {
           else if (idxByRecipe !== -1) idx = idxByRecipe;
 
           if (idx !== -1) {
-            // If local item exists, prefer server's newer data for authoritative fields
             const local = localItems[idx];
             const localTime = parseTime(local.addedAt || local.created_at || local.added_at || 0);
             const serverTime = parseTime(sItem.created_at || sItem.createdAt || 0);
 
             if (serverTime >= localTime) {
-              // merge server fields into local item but keep local clientId if present
               localItems[idx] = {
                 ...local,
                 ...sItem,
@@ -154,7 +141,6 @@ export function PlanProvider({ children }) {
                 recipeId: sItem.recipeId ?? local.recipeId ?? null
               };
             } else {
-              // keep local item but ensure serverId is set if available
               localItems[idx] = {
                 ...local,
                 serverId: local.serverId ?? sItem.serverId ?? null,
@@ -162,10 +148,9 @@ export function PlanProvider({ children }) {
               };
             }
           } else {
-            // New server item -> append
             localItems.push({
               ...sItem,
-              clientId: null // server-origin items have no clientId
+              clientId: null
             });
           }
         });
@@ -215,7 +200,7 @@ export function PlanProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* --- Inventory helpers kept as in your code --- */
+  //Inventory functions are depricated also
   async function adjustInventoryForRecipe(recipeLike, servingsDelta) {
     const recipeId = recipeLike?.id ?? recipeLike?.recipeId ?? null;
     const base_servings = recipeLike?.base_servings ?? recipeLike?.recommended_servings ?? 1;
@@ -268,7 +253,6 @@ export function PlanProvider({ children }) {
 
     if (adjustments.length === 0) return [];
 
-    // optimistic local update
     setInventory((prevInv) => {
       const next = { ...(prevInv || {}) };
       for (const adj of adjustments) {
@@ -280,7 +264,6 @@ export function PlanProvider({ children }) {
       return next;
     });
 
-    // notify backend (only if token present)
     if (token) {
       try {
         const resAdj = await fetch(`${process.env.REACT_APP_API_URL}/api/user/inventory/adjust`, {
@@ -349,8 +332,6 @@ export function PlanProvider({ children }) {
     }
   }, [token]);
 
-  /* --- Core plan functions --- */
-
   function getLocalTodayYMD() {
     const t = new Date();
     const y = t.getFullYear();
@@ -365,7 +346,7 @@ export function PlanProvider({ children }) {
     const entry = {
       clientId: `c-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       recipeId: meal.id ?? meal.recipeId ?? null,
-      serverId: null, // will be populated after server save
+      serverId: null,
       name: meal.name ?? null,
       calories: meal.calories ?? null,
       protein: meal.protein ?? null,
@@ -380,7 +361,6 @@ export function PlanProvider({ children }) {
       mealType: safeMealType
     };
 
-    // optimistic local add
     addLocal(key, entry);
 
     const prefs = readPrefsLocal();
@@ -398,7 +378,7 @@ export function PlanProvider({ children }) {
 
     if (!token) return { ok: true, saved: entry };
 
-    // Persist the mealplan to server
+    //SAVE to DB
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan`, {
         method: "POST",
@@ -421,8 +401,6 @@ export function PlanProvider({ children }) {
 
       const saved = await res.json();
 
-      // saved is expected to be the joined row returned by backend GET after insert
-      // map server response to canonical local shape and merge into plan
       setPlan((prev) => {
         const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
         const idx = arr.findIndex((it) => it.clientId === entry.clientId);
@@ -456,7 +434,6 @@ export function PlanProvider({ children }) {
         return next;
       });
 
-      // If inventory being tracked, sync authoritative inventory (server might have applied or scheduled adjustments)
       if (trackInventory) {
         await syncInventoryFromServer();
       }
@@ -468,9 +445,7 @@ export function PlanProvider({ children }) {
     }
   }
 
-  // UPDATE SERVINGS - persist to server when possible
   async function updateServings(key, indexOrMatcher, newServings) {
-    // optimistic local update
     let targetItem = null;
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
@@ -492,9 +467,9 @@ export function PlanProvider({ children }) {
       const oldServ = Number(oldItem.servings ?? 1);
       const nextServ = Math.max(1, Math.round(Number(newServings) || 1));
       const delta = nextServ - oldServ;
-
+      
+      //Changes nothin
       if (delta === 0) {
-        // nothing changed
         return prev;
       }
 
@@ -512,13 +487,9 @@ export function PlanProvider({ children }) {
       try {
         const prefs = readPrefsLocal();
         const trackInventory = !!prefs.user_inventory;
-
-        // derive scheduled local date from key
         const localDate = typeof key === "string" ? key.slice(0,10) : (targetItem.date || null);
         const localToday = getLocalTodayYMD();
         const isToday = localDate && localDate === localToday;
-
-        // server-side identifier (mealplan row id) should be in serverId / mealplanId
         const mealplanId = targetItem.serverId ?? targetItem.mealplanId ?? null;
 
         if (mealplanId && token) {
@@ -534,11 +505,10 @@ export function PlanProvider({ children }) {
             });
 
             if (res.ok) {
-              const payload = await res.json(); // server returns { ok: true, updated: {...} }
+              const payload = await res.json();
               const updatedServerRow = payload?.updated ?? null;
 
               if (updatedServerRow && (updatedServerRow.id || updatedServerRow.servings != null)) {
-                // Merge authoritative server row into local item
                 setPlan((prev) => {
                   const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
                   const idx = arr.findIndex(it =>
@@ -561,19 +531,15 @@ export function PlanProvider({ children }) {
                   return next;
                 });
 
-                // ensure server authoritative inventory sync
                 if (trackInventory) {
                   await syncInventoryFromServer();
                 }
               } else {
-                // fallback: re-sync that date's range
                 await syncRange(localDate, localDate);
                 if (trackInventory) await syncInventoryFromServer();
               }
             } else {
-              // server refused; re-sync range so client reflects server
               await syncRange(localDate, localDate);
-              // notify user
               const t = await res.text().catch(() => "");
               console.warn("Server PATCH /mealplan returned:", t);
               toast.warn("Failed to persist servings change to server; sync attempted.");
@@ -585,12 +551,9 @@ export function PlanProvider({ children }) {
             return;
           }
         }
-
-        // If no mealplanId (not yet persisted), but we are online & have token, best-effort: re-sync that date
         if (token) {
           await syncRange(localDate, localDate);
         }
-
       } catch (err) {
         console.warn("updateServings inventory adjustment failed", err);
       }
@@ -600,7 +563,6 @@ export function PlanProvider({ children }) {
   }
 
   async function removeMeal(...args) {
-    // same normalize-remove logic as before (unchanged)
     let key, index, serverId = null;
     if (args.length === 1 && typeof args[0] === "object") {
       ({ key, index, serverId = null } = args[0]);

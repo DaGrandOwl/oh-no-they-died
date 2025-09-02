@@ -42,14 +42,9 @@ function Login() {
         setError(data.error || 'Login failed');
         return;
       }
-
-      // Store token
       localStorage.setItem('token', data.token);
-
-      // Update Auth Context
       login({ id: data.user.id, email: data.user.email }, data.token);
 
-      // Merge preferences
       const localRaw = localStorage.getItem('preferences');
       const localPrefs = localRaw ? JSON.parse(localRaw) : {};
       const dbPrefs = data.preferences || {};
@@ -62,7 +57,6 @@ function Login() {
           ? dbPrefs
           : { ...localPrefs, ...dbPrefs, lastUpdated: new Date().toISOString() };
 
-      // Set in context and localStorage
       updatePrefs(mergedPrefs);
       localStorage.setItem('preferences', JSON.stringify(mergedPrefs));
 
@@ -101,7 +95,7 @@ function Login() {
           <button type="submit" style={styles.button}>Login</button>
         </form>
         <p style={styles.registerText}>
-          Don’t have an account? <a href="/register" style={styles.link}>Register</a>
+          Don't have an account? <a href="/register" style={styles.link}>Register</a>
         </p>
       </div>
     </div>

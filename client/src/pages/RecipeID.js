@@ -81,13 +81,9 @@ function scaleNutritionFacts(text, servings, baseServings, size, selectedSize, m
 export default function RecipeID() {
   const { id } = useParams();
   const [recipe, setRecipe] = useState(null);
-
-  //Recipe scaling state
   const [servings, setServings] = useState(1);
   const [sizeInput, setSizeInput] = useState(100);
   const [mode, setMode] = useState("servings");
-
-  //Nutrition scaling state
   const [nutritionMode, setNutritionMode] = useState("servings"); 
   const [nutritionServings, setNutritionServings] = useState(1);
   const [nutritionSize, setNutritionSize] = useState(100);
@@ -244,7 +240,7 @@ export default function RecipeID() {
           </div>
         </div>
 
-        {/* Scaling Controls Card */}
+        {/* Scaling Controls */}
         <div style={cardStyle}>
           <h3 style={{ 
             fontSize: '1.25rem', 

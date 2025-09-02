@@ -1,4 +1,3 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -11,6 +10,7 @@ import RecipeList from './pages/RecipeList.js';
 import Inventory from './pages/Inventory.js';
 import Settings from './pages/Settings.js';
 // Components
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import UnauthenticatedRoute from './components/UnauthenticatedRoute.js';
 import Layout from './components/Layout.js';

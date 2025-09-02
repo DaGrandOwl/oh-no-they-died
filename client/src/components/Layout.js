@@ -1,12 +1,6 @@
 import { Outlet, NavLink } from "react-router-dom";
 import logo from '../components/logo.png';
-import {
-  Croissant,
-  Utensils,
-  Settings,
-  Home,
-  SquareArrowOutUpRight,
-} from "lucide-react";
+import { Croissant,Utensils,Settings,Home,SquareArrowOutUpRight } from "lucide-react";
 
 const sidebarStyles = {
   sidebar: {
@@ -103,6 +97,7 @@ const Layout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside style={sidebarStyles.sidebar}>
+        {/* Logo */}
         <div style={sidebarStyles.brand}>
           <div style={sidebarStyles.logo}><img src={logo} width={75} height={75} alt='MP' /></div>
           <div>
@@ -110,6 +105,7 @@ const Layout = () => {
             <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
           </div>
         </div>
+        {/* Navigation */}
         <nav style={sidebarStyles.nav}>
           <NavLink to="/dashboard" style={navLinkStyle}>
             <Home style={{ width: "1rem", height: "1rem" }} />
@@ -137,7 +133,7 @@ const Layout = () => {
         </nav>
       </aside>
 
-      {/* Main Content */}
+      {/* Pass page through layout */}
       <main style={{ flex: 1, marginLeft: "280px", overflow: "auto", minHeight: "100vh" }}>
         <Outlet />
       </main>

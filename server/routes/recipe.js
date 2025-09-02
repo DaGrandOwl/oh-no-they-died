@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 
+// For RecipeList page
 export default fp(async function (fastify, opts) {
-  // For RecipeList page
   fastify.get("/api/recipes", async (request, reply) => {
     try {
       const sql = `

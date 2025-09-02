@@ -215,7 +215,6 @@ export default function Dashboard() {
   const [results, setResults] = useState([]);
   const [highlightedRecipe, setHighlightedRecipe] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
   const plannerContainerStyle = {
@@ -223,6 +222,7 @@ export default function Dashboard() {
     width: '100%'
   };
 
+  //SEARCH
   async function searchRecipes() {
     try {
       setLoading(true);
@@ -262,7 +262,7 @@ export default function Dashboard() {
     }
   }
 
-  // Load initial results on component mount
+  // Load initial on boot
   useEffect(() => {
     searchRecipes();
   }, []);
@@ -280,7 +280,6 @@ export default function Dashboard() {
   }
 
   async function handleDrop(recipe, date, mealTime) {
-    // this is called from the planner when a card is dropped
     await handleAddRecipeToPlan(recipe, date, mealTime);
     clearHighlight();
   }
@@ -327,7 +326,7 @@ export default function Dashboard() {
     }
   }, [removeMeal]);
 
-  // Styles...
+  // Styles
   const cardStyle = { background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(10px)', borderRadius:'1rem', border:'1px solid rgba(148,163,184,0.1)', padding:'1.5rem', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.1)', marginBottom: '1rem' };
   const inputStyle = { padding:'0.75rem 1rem', background:'rgba(30,41,59,0.8)', border:'1px solid rgba(148,163,184,0.2)', borderRadius:'0.5rem', color:'#f8fafc', fontSize:'0.875rem', outline:'none' };
   const selectStyle = { ...inputStyle, cursor: 'pointer' };
@@ -348,8 +347,7 @@ export default function Dashboard() {
                     </h1>
                     <p style={styles.subtitle} >Discover and plan your next meal</p>
                 </div>
-
-            {/* Top grid: Filters (left) and Results (right) */}
+                
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
                 <div style={cardStyle}>

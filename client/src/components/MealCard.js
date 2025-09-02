@@ -7,7 +7,7 @@ export default function MealCard({
   recipe,
   item,
   compact = false,
-  hideImage = false,
+  hideImage = false, //This was originally used in earlier additions but is deprecated
   onAddToPlan,
   isoDate,
   mealTime,
@@ -23,6 +23,7 @@ export default function MealCard({
   const data = recipe || item;
   const { updateServings } = usePlan();
 
+  //Determine initial servings
   const initialServings = useMemo(() => {
     if (!data) return 1;
     if (data.servings != null) return Math.max(1, Math.round(Number(data.servings)));
@@ -36,7 +37,7 @@ export default function MealCard({
 
   useEffect(() => {
     setServings(initialServings);
-  }, [initialServings]);
+  }, []);
 
   const originMeta = useMemo(() => ({
     date: data?.date || data?.scheduled_date || data?.scheduledDate || null,
@@ -133,7 +134,7 @@ export default function MealCard({
   const displayCarbs = Math.round(((data.carbs ?? 0) * scale) * 10) / 10;
   const displayFat = Math.round(((data.fat ?? 0) * scale) * 10) / 10;
 
-  // ---- styles  ----
+  //STYLES
   const removeButtonStyle = {
     position: 'absolute',
     top: 2,
@@ -223,6 +224,7 @@ export default function MealCard({
     marginTop: 8
   };
 
+  //Depreciated
   const servingsButton = {
     width: 28,
     height: 28,
@@ -276,7 +278,7 @@ export default function MealCard({
   };
 
   return (
-    <div
+    <div 
       ref={dragRef}
       style={containerStyle}
       role="article"
@@ -285,7 +287,7 @@ export default function MealCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
-           {showRemoveButton && plannerMode && (
+      {showRemoveButton && plannerMode && ( //Remove meal button
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -321,7 +323,7 @@ export default function MealCard({
         )}
       </div>
 
-      {/* main info */}
+      {/*INFO */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: isMinimized ? 4 : 8 }}>
           <div style={titleStyle}>{data.name}</div>
@@ -366,7 +368,7 @@ export default function MealCard({
         )}
       </div>
 
-      {/* controls */}
+      {/* Controls */}
       {!compact && !isMinimized && (
         <div style={{
           display: "flex",

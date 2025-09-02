@@ -291,7 +291,7 @@ export default function RecipeList() {
           <Utensils style={{ width: '2.5rem', height: '2.5rem', color: '#8b5cf6' }} />
           Recipe Collection
         </h1>
-        <p style={styles.subtitle}>Discover and explore your culinary creations</p>
+        <p style={styles.subtitle}>Discover and explore our catalog of culinary creations</p>
       </div>
 
       <div style={styles.searchCard}>

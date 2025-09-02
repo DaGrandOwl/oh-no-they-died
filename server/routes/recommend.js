@@ -37,7 +37,6 @@ export default fp(async function (fastify) {
       if (protein) { conditions.push(`rg.protein >= ?`); params.push(parseFloat(protein)); }
       if (fat) { conditions.push(`rg.fat >= ?`); params.push(parseFloat(fat)); }
       if (maxCost) { conditions.push(`rg.appx_cost <= ?`); params.push(parseFloat(maxCost)); }
-      //Take dietary preferrence and allergies into account
       if (request.user) {
         const userDiet = request.user.diet_type || "any";
         const userAllergies = Array.isArray(request.user.allergens)
@@ -59,7 +58,6 @@ export default fp(async function (fastify) {
         });
       }
 
-      //Base SELECT
       let sql = `SELECT 
         rg.id,
         ANY_VALUE(rg.name) AS name,
@@ -78,26 +76,22 @@ export default fp(async function (fastify) {
       LEFT JOIN recipe_ingredients ri2 ON rg.id = ri2.recipe_id
       `;
 
-      // JOIN for inventory match
       if (inventoryMatch === "true" && request.user) {
         sql += ` LEFT JOIN user_inventory AS ui ON ui.user_id = ? AND ui.item_name = ri2.item_name `;
         params.push(request.user.id);
       }
 
-      // WHERE
       if (conditions.length) {
         sql += " WHERE " + conditions.join(" AND ");
       }
 
       sql += " GROUP BY rg.id";
 
-      // HAVING for inventory match
       if (inventoryMatch === "true" && request.user) {
         sql += ` HAVING (SUM(ui.quantity IS NOT NULL) >= 0.8 * COUNT(ri2.id))
-                 AND (SUM(CASE WHEN (ri2.notes LIKE '%main%' OR ri2.notes LIKE '%main:%' OR ri2.notes LIKE '%main;%') AND ui.quantity IS NULL THEN 1 ELSE 0 END) = 0)`;
+         AND (SUM(CASE WHEN (ri2.notes LIKE '%main%' OR ri2.notes LIKE '%main:%' OR ri2.notes LIKE '%main;%') AND ui.quantity IS NULL THEN 1 ELSE 0 END) = 0)`;
       }
 
-      // ORDER BY closest calories, then picks 5 random
       sql += ` ORDER BY ABS(rg.calories - ?) ASC, RAND() LIMIT 5`;
       params.push(parseFloat(calories) || 0);
 

@@ -18,7 +18,7 @@ export function PrefProvider({ children }) {
 
   const defaultPrefs = {
     allergens: [],
-    user_inventory: true,
+    user_inventory: false,
     diet_type: "any",
     lastUpdated: new Date().toISOString(),
   };
@@ -27,7 +27,7 @@ export function PrefProvider({ children }) {
     return initialFromStorage ? { ...defaultPrefs, ...initialFromStorage } : defaultPrefs;
   });
 
-  // Sync with DB if logged in and DB prefs are newer
+  // Sync with DB
   useEffect(() => {
     if (!token) return;
 
@@ -43,18 +43,15 @@ export function PrefProvider({ children }) {
 
         const localRaw = localStorage.getItem("preferences");
         const localPrefs = localRaw ? JSON.parse(localRaw) : null;
-
         const dbUpdated = dbPrefs.lastUpdated ? new Date(dbPrefs.lastUpdated) : null;
         const localUpdated = localPrefs && localPrefs.lastUpdated ? new Date(localPrefs.lastUpdated) : null;
 
-        // Only overwrite local if DB is newer
         if (!cancelled && dbUpdated && (!localUpdated || dbUpdated > localUpdated)) {
           const merged = { ...defaultPrefs, ...dbPrefs };
           localStorage.setItem("preferences", JSON.stringify(merged));
           setPrefs(merged);
         }
       } catch (err) {
-        // non-fatal: keep local prefs
         console.error("Failed to fetch preferences:", err);
       }
     })();
@@ -65,7 +62,7 @@ export function PrefProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Update preferences locally and optionally in DB
+  // Update preferences locally and DB
   const updatePrefs = async (newPrefs) => {
     const merged = { ...prefs, ...newPrefs, lastUpdated: new Date().toISOString() };
     setPrefs(merged);
@@ -89,7 +86,6 @@ export function PrefProvider({ children }) {
         },
         body: JSON.stringify(payload),
       }).catch(() => {
-        // DB update failed; local prefs still intact
       });
     }
   };

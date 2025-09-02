@@ -8,7 +8,7 @@ export default fp(async function (fastify) {
     return !Number.isNaN(d.getTime());
   }
 
-  // POST /api/user/mealplan - create & schedule/apply changes (stores base_servings)
+  // POST /api/user/mealplan
   fastify.post("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const conn = await fastify.db.getConnection();
     try {
@@ -27,7 +27,6 @@ export default fp(async function (fastify) {
       const safeMealType = String(mealType).toLowerCase();
       const serv = Number(servings || 1);
 
-      // get recipe base_servings (if any) to persist into user_mealplan.base_servings
       const [riRows] = await conn.query(
         `SELECT COALESCE(base_servings, NULL) AS base_servings FROM recipe_instructions WHERE recipe_id = ? LIMIT 1`,
         [recipeId]
@@ -36,7 +35,6 @@ export default fp(async function (fastify) {
 
       await conn.beginTransaction();
 
-      // insert including base_servings column
       const insertSql = `
         INSERT INTO user_mealplan (user_id, recipe_id, scheduled_date, meal_type, servings, base_servings)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -44,7 +42,6 @@ export default fp(async function (fastify) {
       const [result] = await conn.query(insertSql, [userId, recipeId, date, safeMealType, serv, baseServFromRecipe]);
       const insertedId = result.insertId;
 
-      // Fetch the inserted row with recipe metadata (including base_servings)
       const [rows] = await conn.query(
         `SELECT
           ump.id,
@@ -76,7 +73,6 @@ export default fp(async function (fastify) {
         saved.allergens = saved.allergens || [];
       }
 
-      // Gather ingredients and compute adjustments as before (using recipe_ingredients + recipe_instructions.base_servings)
       const [ings] = await conn.query(
         `SELECT ri.id, ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
          FROM recipe_ingredients ri
@@ -153,8 +149,7 @@ export default fp(async function (fastify) {
     }
   });
 
-  // PATCH /api/user/mealplan/:id (update servings & inventory changes)
-  // (Keep existing behavior: update user_mealplan.servings; if applyNow apply inventory diffs; else rebuild user_inventory_changes)
+  // PATCH /api/user/mealplan/:id
   fastify.patch("/api/user/mealplan/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const conn = await fastify.db.getConnection();
     try {
@@ -186,7 +181,6 @@ export default fp(async function (fastify) {
       await conn.query("UPDATE user_mealplan SET servings = ? WHERE id = ? AND user_id = ?", [newServ, id, userId]);
 
       if (applyNow) {
-        // apply immediate inventory diffs for delta
         const recipeId = row.recipe_id;
         const [ings] = await conn.query(
           `SELECT ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
@@ -222,7 +216,6 @@ export default fp(async function (fastify) {
           }
         }
       } else {
-        // rebuild scheduled rows
         await conn.query("DELETE FROM user_inventory_changes WHERE mealplan_id = ?", [id]);
 
         if (newServ !== 0) {
@@ -271,7 +264,7 @@ export default fp(async function (fastify) {
     }
   });
 
-  // GET /api/user/mealplan (unchanged except will return base_servings from user_mealplan)
+  // GET /api/user/mealplan
   fastify.get("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const userId = request.user?.id;
@@ -350,7 +343,7 @@ export default fp(async function (fastify) {
     }
   });
 
-  // DELETE /api/user/mealplan/:id (unchanged)
+  // DELETE /api/user/mealplan/:id
   fastify.delete("/api/user/mealplan/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const conn = await fastify.db.getConnection();
     try {

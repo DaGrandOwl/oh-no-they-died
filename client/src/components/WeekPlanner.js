@@ -7,10 +7,8 @@ import MealCard from "./MealCard";
 
 const mealTimes = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const mealContainerStyle = {
-  position: 'relative',
-  zIndex: 10
-};
+const mealContainerStyle = { position: 'relative',zIndex: 10 };
+
 function buildWeekDates(dateForWeekday) {
   return daysOfWeek.map((day) => {
     const weekdayKey = day.toLowerCase();
@@ -92,7 +90,7 @@ function PlannerCell({
   plannerMode = false,
   minimized = false,
   darkTheme = true
-}) {
+}){
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
     drop: (item) => {
@@ -106,7 +104,7 @@ function PlannerCell({
 
   const highlight = highlightedRecipe !== null;
 
-  // Merge same meals in a cell
+  //Merging same cells adds servings
   const mergedMeals = useMemo(() => {
     const map = new Map();
     meals.forEach((m, rawIndex) => {
@@ -129,6 +127,7 @@ function PlannerCell({
     return Array.from(map.values());
   }, [meals]);
 
+  //DarkTheme is depricated, but does not conflict with anything
   const cellStyle = darkTheme ? {
     minHeight: 60,
     padding: "0.15rem",
@@ -224,7 +223,7 @@ export default function WeekPlanner({
   const [weekOffset, setWeekOffset] = useState(0);
 
   const computeIsoForWeekday = useCallback((weekdayKey) => {
-    // find the date for sunday of the target week then add offset
+    //Sunday is considered start of week
     const targetWeekStart = (() => {
       const today = new Date();
       const dayOfWeek = today.getDay();
@@ -238,7 +237,7 @@ export default function WeekPlanner({
     if (idx === -1) return null;
     const d = new Date(targetWeekStart);
     d.setDate(targetWeekStart.getDate() + idx);
-    // return local YYYY-MM-DD
+    //Return in format yyyy-mm-dd
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -284,7 +283,6 @@ export default function WeekPlanner({
       return;
     }
 
-    // check if already exists in target
     const targetArr = Array.isArray(plan[targetKey]) ? [...plan[targetKey]] : [];
     const existingIdx = targetArr.findIndex(it => String(getRecipeId(it)) === String(droppedRecipeId));
 
@@ -298,23 +296,19 @@ export default function WeekPlanner({
       sourceIndex = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
     }
 
-    // If the dragged item originated from the planner itself and nothing changed, ignore
+    // Dragging within same cell and same item does nothing
     if (sourceKey && sourceKey === targetKey && sourceIndex !== -1 && existingIdx !== -1 && sourceIndex === existingIdx) return;
 
-    // if existing found -> merge servings
+    // If different cell but same item, merge servings
     if (existingIdx !== -1) {
       const existing = targetArr[existingIdx];
       const combinedServings = Number(existing.servings ?? 0) + droppedServings;
 
-      // remove existing entry first
       try {
         await removeMeal({ key: targetKey, index: existingIdx, serverId: existing.serverId ?? null });
       } catch (err) {
       }
-
-      // if the drop originated from a different cell, remove original too
       if (sourceKey && sourceKey !== targetKey) {
-        // find index in source cell
         const sourceArr = Array.isArray(plan[sourceKey]) ? [...plan[sourceKey]] : [];
         const matchIdx = sourceArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId));
         if (matchIdx !== -1) {
@@ -324,15 +318,11 @@ export default function WeekPlanner({
           }
         }
       }
-
-      // add combined entry (PlanContext will manage inventory based on user prefs)
       const res = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, combinedServings);
       if (res?.ok) toast.success("Merged servings and saved to plan");
       else toast.error("Failed to merge servings");
       return;
     }
-
-    // no existing in target, just move (if from other cell remove original first)
     if (sourceKey && sourceKey !== targetKey && srcArr) {
       const matchIdx = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
       if (matchIdx !== -1) {
@@ -343,7 +333,7 @@ export default function WeekPlanner({
       }
     }
 
-    // add dropped recipe to target (PlanContext handles inventory if enabled)
+    //Drag and drop meal
     const addRes = await addMeal({ id: droppedRecipeId, name: recipe.name, image: recipe.image, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat, allergens: recipe.allergens }, isoDate, mealTime, droppedServings);
     if (addRes?.ok) toast.success("Added to plan");
     else toast.error("Failed to add to plan");
@@ -359,7 +349,7 @@ export default function WeekPlanner({
     }
   }, [weekDates, syncRange]);
 
-  // Auto-refresh on mount and whenever weekOffset (the displayed week) changes
+  //Refresh when on boot
   useEffect(() => {
     refreshWeek();
   }, [weekOffset, refreshWeek]);
@@ -374,7 +364,6 @@ export default function WeekPlanner({
     }
     if (idx < 0) return;
     try {
-      // removeMeal will refund inventory if user has inventory tracking turned on (handled in PlanContext)
       await removeMeal({ key, index: idx, serverId: arr[idx]?.serverId ?? serverId ?? null });
       toast.info("Removed from plan");
     } catch (err) {
@@ -382,7 +371,7 @@ export default function WeekPlanner({
     }
   }, [plan, removeMeal]);
 
-  // compute today local (for highlight)
+  //For highlighting present date, deprecated also
   const todayLocal = (() => {
     const t = new Date();
     const y = t.getFullYear();
@@ -456,7 +445,7 @@ export default function WeekPlanner({
 
   return (
     <div style={containerStyle}>
-      <ConfirmModal
+      <ConfirmModal //Prevent allergens being entered accidentally
         open={confirmOpen}
         title="Allergen Warning"
         message="This recipe contains one or more allergens you marked. Are you sure you want to add it?"

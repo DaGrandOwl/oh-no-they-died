@@ -62,7 +62,6 @@ const StartPage = () => {
       position: "relative",
       overflow: "hidden"
     }}>
-      {/* Decorative elements */}
       <div style={{
         position: "absolute",
         top: "-100px",
@@ -83,8 +82,7 @@ const StartPage = () => {
         background: "radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, rgba(139, 92, 246, 0.1) 70%, transparent 100%)",
         zIndex: 0
       }}></div>
-
-      {/* Header with CTA button */}
+      
       <header style={{
         display: "flex",
         justifyContent: "space-between",
@@ -172,7 +170,7 @@ const StartPage = () => {
       </section>
 
       {/* Top paragraph */}
-        <button style={buttonPrimary} onClick={() => navigate("/login")}> Get Started <ChevronRight size={16} />
+        <button style={buttonPrimary} onClick={() => navigate("/dashboard")}> Get Started <ChevronRight size={16} />
         </button>
       <div style={{
         textAlign: "center",

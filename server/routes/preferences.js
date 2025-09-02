@@ -1,17 +1,14 @@
 import fp from "fastify-plugin";
 
 export default fp(async function (fastify) {
-  // Convert ISO 8601 to MySQL DATETIME format for DB
   function toMySQLDate(isoString) {
     return new Date(isoString).toISOString().slice(0, 19).replace("T", " ");
   }
 
-  // Convert MySQL DATETIME to ISO 8601 format for frontend
   function toISODate(mysqlDate) {
     return mysqlDate ? new Date(mysqlDate).toISOString() : null;
   }
 
-  // Ensure parsed JSON is not null
   function safeJSONParse(str, fallback) {
     try {
       return JSON.parse(str);
@@ -30,7 +27,6 @@ export default fp(async function (fastify) {
       );
 
       if (!rows.length) {
-        // No prefs record yet
         return reply.send(null);
       }
 
@@ -47,15 +43,13 @@ export default fp(async function (fastify) {
     }
   });
 
-  // PUT preferences to DB (upsert)
+  // PUT preferences to DB
   fastify.put("/api/user/preferences", { preHandler: [fastify.authenticate] }, async (req, reply) => {
     try {
       const userId = req.user.id;
       const { diet_type, allergens, user_inventory, lastUpdated } = req.body || {};
       const safeDiet = typeof diet_type === "string" && diet_type.trim() !== "" ? diet_type.trim() : "any";
       const updatedAt = lastUpdated ? toMySQLDate(lastUpdated) : toMySQLDate(new Date());
-
-      // Ensure allergens is JSON
       const allergensJson = JSON.stringify(Array.isArray(allergens) ? allergens : (allergens ? [allergens] : []));
 
       await fastify.db.query(

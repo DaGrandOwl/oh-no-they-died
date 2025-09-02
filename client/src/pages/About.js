@@ -49,8 +49,7 @@ const About = () => {
         zIndex: 0
       }}></div>
 
-      {/* Back button */}
-      <header style={{
+      <header style={{  //Back button
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -96,7 +95,6 @@ const About = () => {
         </div>
       </header>
 
-      {/* Main content */}
       <div style={{
         display: "flex",
         flexDirection: "column",
@@ -106,7 +104,7 @@ const About = () => {
         position: "relative",
         zIndex: 10
       }}>
-        {/* Project description */}
+        {/* description */}
         <div style={cardStyle}>
           <h2 style={{ 
             margin: "0 0 1rem 0", 
@@ -126,7 +124,7 @@ const About = () => {
           </p> 
         </div>
 
-        {/* Team section */}
+        {/* Team */}
         <div style={cardStyle}>
           <h2 style={{ 
             margin: "0 0 1.5rem 0", 

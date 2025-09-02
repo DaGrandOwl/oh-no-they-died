@@ -125,7 +125,7 @@ export default function InventoryPage() {
     }
   }
 
-  // Styling constants
+  //STYLEs
   const pageStyle = {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
@@ -204,7 +204,6 @@ export default function InventoryPage() {
     width: '80px'
   };
 
-  // Compute data
   const invMap = {};
   inventory.forEach(r => { invMap[r.item_name] = r; });
 
@@ -246,7 +245,7 @@ export default function InventoryPage() {
             color: '#94a3b8'
           }}>
             <RefreshCw className="spin" style={{ animation: 'spin 1s linear infinite' }} />
-            Loading inventory...
+            Loading pantry...
           </div>
         </div>
       </div>
@@ -259,21 +258,21 @@ export default function InventoryPage() {
         <div>
         <h1 style={title}>
           <Croissant style={{ width: '2.5rem', height: '2.5rem', color: '#8b5cf6' }} />
-          My Inventory
+          My Pantry
         </h1>
         <p style={subtitle}>Manage your ingredients and track upcoming usage</p>
         </div>
         <button 
           onClick={fetchAll} 
           style={buttonGhost}
-          title="Refresh inventory"
+          title="Refresh pantry"
         >
           <RefreshCw size={16} />
           Refresh
         </button>
       </div>
 
-      {/* Will run out soon section */}
+      {/* Limited stock */}
       <section style={cardStyle}>
         <div style={{ 
           display: 'flex', 
@@ -340,7 +339,7 @@ export default function InventoryPage() {
         )}
       </section>
 
-      {/* Remaining inventory section */}
+      {/* Remaining stocks section */}
       <section style={cardStyle}>
         <div style={{ 
           display: 'flex', 
@@ -351,7 +350,7 @@ export default function InventoryPage() {
         }}>
           <Package size={20} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#f8fafc', margin: 0 }}>
-            Remaining in inventory
+            Remaining in pantry
           </h3>
         </div>
         
@@ -407,7 +406,7 @@ export default function InventoryPage() {
         )}
       </section>
 
-      {/* Known items section */}
+      {/* Not in pantry section */}
       <section style={cardStyle}>
         <div style={{ 
           display: 'flex', 
@@ -418,7 +417,7 @@ export default function InventoryPage() {
         }}>
           <PlusCircle size={20} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#f8fafc', margin: 0 }}>
-            Known items not in your inventory
+            Items not in your pantry
           </h3>
         </div>
         
@@ -468,10 +467,10 @@ export default function InventoryPage() {
           </div>
         )}
       </section>
-
+      
       <style>
-        {`
-          @keyframes spin {
+         {`
+          @keyframes spin { 
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }

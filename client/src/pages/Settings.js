@@ -198,13 +198,11 @@ const settingsStyles = {
 export default function SettingsPage() {
   const { prefs, updatePrefs } = usePreferences();
   const { logout } = useAuth();
-
-  // Local state for immediate UI updates
   const [inventory, setInventory] = useState(!!prefs?.user_inventory);
   const [allergens, setAllergens] = useState(Array.isArray(prefs?.allergens) ? prefs.allergens : []);
   const [dietType, setDietType] = useState(prefs?.diet_type || "any");
 
-  // Sync local state when prefs change
+  // Sync when prefs change
   useEffect(() => {
     setInventory(!!prefs?.user_inventory);
     setAllergens(Array.isArray(prefs?.allergens) ? prefs.allergens : []);
@@ -227,7 +225,6 @@ export default function SettingsPage() {
     { value: "mediterranean", label: "Mediterranean" }
   ];
 
-  // Handlers
   const toggleInventory = () => {
     const next = !inventory;
     setInventory(next);

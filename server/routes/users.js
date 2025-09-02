@@ -8,8 +8,6 @@ export default fp(async function (fastify, opts) {
       secret: process.env.JWT_SECRET || 'supersecret',
     });
   }
-
-  // Rate limit for this route only
   await fastify.register(rateLimit)
 
   // REGISTER
@@ -38,15 +36,12 @@ export default fp(async function (fastify, opts) {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Insert new user
       const result = await fastify.db.query(
         'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
         [username, email, hashedPassword]
       );
 
       const userId = result[0].insertId;
-
-      // Insert default preferences until user sets their own
       await fastify.db.query(
         'INSERT INTO user_preferences (user_id, diet_type, allergens, user_inventory, updated_at) VALUES (?, ?, ?, ?, NOW())',
         [userId, '[]', '[]', '0']
@@ -55,8 +50,6 @@ export default fp(async function (fastify, opts) {
 
       // Generate JWT token for auto-login
       const token = fastify.jwt.sign({ id: userId, email });
-
-      // Return token and basic user info
       return reply.send({
         message: 'Registration successful',
         token,
@@ -101,8 +94,6 @@ export default fp(async function (fastify, opts) {
       }
 
       const token = fastify.jwt.sign({ id: user.id, email: user.email });
-
-      // Fetch preferences from DB if any
       const [prefsRows] = await fastify.db.query(
         'SELECT  allergens, diet_type, user_inventory, updated_at FROM user_preferences WHERE user_id = ?',
         [user.id]
@@ -112,7 +103,6 @@ export default fp(async function (fastify, opts) {
       if (prefsRows.length > 0) {
         const row = prefsRows[0];
 
-        // Ensure allergens is parsed correctly
         let allergens = [];
         try {
           allergens = row.allergens ? JSON.parse(row.allergens) : [];
