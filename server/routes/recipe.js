@@ -31,16 +31,26 @@ export default fp(async function (fastify, opts) {
   fastify.get("/api/recipe/:id", async (request, reply) => {
     try {
       const { id } = request.params;
-      const [instructions] = await fastify.db.query(
-        "SELECT * FROM recipe_instructions WHERE recipe_id = ?",
-        [id]
-      );
+      const [rows] = await fastify.db.query(`
+        SELECT 
+          rg.name,
+          ri.recipe_id,
+          ri.base_servings,
+          ri.appx_mass,
+          ri.description,
+          ri.directions,
+          ri.nutrition_facts,
+          ri.image
+        FROM recipe_instructions ri
+        JOIN recipe_general rg ON rg.id = ri.recipe_id
+        WHERE ri.recipe_id = ?
+      `, [id]);
 
-      if (!instructions || instructions.length === 0) {
+      if (!rows || rows.length === 0) {
         return reply.code(404).send({ error: "Recipe not found" });
       }
 
-      const instruction = instructions[0];
+      const recipe = rows[0];
 
       const [ingredients] = await fastify.db.query(
         "SELECT * FROM recipe_ingredients WHERE recipe_id = ?",
@@ -49,20 +59,20 @@ export default fp(async function (fastify, opts) {
 
       return reply.send({
         recipe: {
-          id: instruction.recipe_id,
-          name: instruction.name ?? null,
-          baseServings: instruction.base_servings,
-          size: instruction.appx_mass,
-          description: instruction.description,
-          directions: instruction.directions,
-          nutrition_facts: instruction.nutrition_facts,
-          image: instruction.image,
-          ingredients: ingredients,
+          id: recipe.recipe_id,
+          name: recipe.name,
+          baseServings: recipe.base_servings,
+          size: recipe.appx_mass,
+          description: recipe.description,
+          directions: recipe.directions,
+          nutrition_facts: recipe.nutrition_facts,
+          image: recipe.image,
+          ingredients
         }
       });
     } catch (err) {
       fastify.log.error(err);
       return reply.code(500).send({ error: "Internal server error" });
     }
-  });
+  })
 });

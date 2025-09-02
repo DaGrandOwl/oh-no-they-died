@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { data, useParams } from "react-router-dom";
 
 //Parse and scale ingredients
 function scaleIngredients(ingredients, servings, baseServings, size, selectedSize, mode) {
@@ -96,6 +96,7 @@ export default function RecipeID() {
     async function fetchRecipe() {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/recipe/${id}`);
       const data = await res.json();
+
       setRecipe(data.recipe);
       setServings(data.recipe.baseServings);
       setNutritionServings(data.recipe.baseServings);
@@ -233,7 +234,7 @@ export default function RecipeID() {
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <span>📋</span> {recipe.name} {/*HERE*/}
+            <span>📋</span> {recipe.name}
           </h2>
           
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
