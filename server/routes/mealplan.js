@@ -8,7 +8,7 @@ export default fp(async function (fastify) {
     return !Number.isNaN(d.getTime());
   }
 
-  // Apply pending adjustments to user_inventory
+  // Apply pending adjustments to user_inventory (transaction wrapper)
   async function applyAdjustmentsToInventory(db, userId, adjustments) {
     // adjustments: [{ item_name, delta, unit }]
     const conn = await db.getConnection();
@@ -42,7 +42,7 @@ export default fp(async function (fastify) {
     }
   }
 
-  // POST /api/user/mealplan (create mealplan and schedule/apply inventory changes)
+  // POST /api/user/mealplan - create & schedule/apply changes
   fastify.post("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const conn = await fastify.db.getConnection();
     try {
@@ -58,7 +58,6 @@ export default fp(async function (fastify) {
       }
       const safeMealType = String(mealType).toLowerCase();
 
-      // write mealplan row (scheduled_date is stored as the local YYYY-MM-DD provided by client)
       await conn.beginTransaction();
       const sql = `
         INSERT INTO user_mealplan (user_id, recipe_id, scheduled_date, meal_type, servings)
@@ -67,7 +66,6 @@ export default fp(async function (fastify) {
       const [result] = await conn.query(sql, [userId, recipeId, date, safeMealType, Number(servings)]);
       const insertedId = result.insertId;
 
-      // fetch inserted row with recipe metadata (same as before)
       const [rows] = await conn.query(
         `SELECT
           ump.id,
@@ -97,7 +95,7 @@ export default fp(async function (fastify) {
         saved.allergens = saved.allergens.split(",").map(s => s.trim()).filter(Boolean);
       } else if (saved) saved.allergens = saved.allergens || [];
 
-      // derive ingredient deltas from recipe_ingredients
+      // gather ingredients for adjustments
       const [ings] = await conn.query(
         `SELECT ri.id, ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
          FROM recipe_ingredients ri
@@ -111,7 +109,6 @@ export default fp(async function (fastify) {
         : (saved?.base_servings ? Number(saved.base_servings) : 1);
       const serv = Number(servings || 1);
 
-      // Build adjustments array: negative means consumption
       const adjustments = [];
       for (const ing of (ings || [])) {
         const itemName = String(ing.item_name || "").trim();
@@ -122,27 +119,23 @@ export default fp(async function (fastify) {
         adjustments.push({ item_name: itemName, delta: -qty, unit: ing.unit || null });
       }
 
-      // Determine whether client asked for immediate apply (applyNow) — fallback to legacy UTC comparison
+      // determine applyNow
       let applyNow = false;
       if (typeof request.body?.applyNow !== "undefined") {
         applyNow = !!request.body.applyNow;
       } else {
-        // legacy behavior: compare provided date against server's UTC "today"
         const todayUTC = new Date().toISOString().slice(0,10);
         applyNow = (date === todayUTC);
       }
 
       if (applyNow) {
-        // apply immediately to user_inventory
         if (adjustments.length > 0) {
-          // apply via same connection / transaction to keep consistency
           for (const adj of adjustments) {
             const item_name = String(adj.item_name || "").trim();
             const delta = Number(adj.delta || 0);
             const unit = adj.unit || null;
             if (!item_name) continue;
 
-            // lock/select row for update
             const [invRows] = await conn.query(
               `SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1 FOR UPDATE`,
               [userId, item_name, unit, unit]
@@ -158,7 +151,6 @@ export default fp(async function (fastify) {
           }
         }
       } else {
-        // schedule into user_inventory_changes referencing mealplan id (future behavior)
         if (adjustments.length > 0) {
           for (const adj of adjustments) {
             await conn.query(
@@ -172,7 +164,6 @@ export default fp(async function (fastify) {
 
       await conn.commit();
       conn.release();
-
       return reply.status(201).send(saved);
     } catch (err) {
       try { await conn.rollback(); } catch (e) { /* ignore */ }
@@ -182,7 +173,139 @@ export default fp(async function (fastify) {
     }
   });
 
-  // GET list plan items for a user, supports optional range query: start & end (YYYY-MM-DD)
+  // PATCH /api/user/mealplan/:id - update servings and apply/schedule inventory diffs
+  fastify.patch("/api/user/mealplan/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const conn = await fastify.db.getConnection();
+    try {
+      const userId = request.user?.id;
+      const id = parseInt(request.params.id, 10);
+      if (!id) {
+        conn.release();
+        return reply.status(400).send({ error: "Invalid id" });
+      }
+
+      const { servings: newServRaw, applyNow: applyNowBody } = request.body || {};
+      if (typeof newServRaw === "undefined" || newServRaw === null) {
+        conn.release();
+        return reply.status(400).send({ error: "Missing servings" });
+      }
+      const newServ = Math.max(0, Math.round(Number(newServRaw) || 0));
+
+      // fetch current mealplan row
+      const [rows] = await conn.query(
+        "SELECT id, recipe_id, servings, DATE_FORMAT(scheduled_date, '%Y-%m-%d') AS scheduled_date FROM user_mealplan WHERE id = ? AND user_id = ?",
+        [id, userId]
+      );
+      if (!rows.length) {
+        conn.release();
+        return reply.status(404).send({ error: "Not found" });
+      }
+      const row = rows[0];
+      const oldServ = Number(row.servings || 0);
+      const delta = newServ - oldServ;
+      if (delta === 0) {
+        conn.release();
+        return reply.send({ ok: true, updated: { id: row.id, servings: oldServ } });
+      }
+
+      const todayUTC = new Date().toISOString().slice(0,10);
+      const scheduledDate = row.scheduled_date;
+      const applyNow = (typeof applyNowBody !== "undefined") ? !!applyNowBody : (scheduledDate && scheduledDate <= todayUTC);
+
+      await conn.beginTransaction();
+
+      // update servings
+      await conn.query("UPDATE user_mealplan SET servings = ? WHERE id = ? AND user_id = ?", [newServ, id, userId]);
+
+      if (applyNow && delta !== 0) {
+        // immediate apply: compute ingredient delta and apply to user_inventory
+        const recipeId = row.recipe_id;
+        const [ings] = await conn.query(
+          `SELECT ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
+           FROM recipe_ingredients ri
+           LEFT JOIN recipe_instructions rins ON rins.recipe_id = ri.recipe_id
+           WHERE ri.recipe_id = ?`,
+          [recipeId]
+        );
+
+        const baseServings = (ings && ings.length && ings[0].base_servings) ? Number(ings[0].base_servings) : 1;
+        const absDelta = Math.abs(delta);
+        const sign = delta > 0 ? -1 : 1; // if increasing servings -> consume more (negative adj), if decreasing -> refund (positive)
+
+        for (const ing of (ings || [])) {
+          const itemName = String(ing.item_name || "").trim();
+          if (!itemName) continue;
+          const rawAmt = Number(ing.quantity || 0) || 0;
+          const qty = rawAmt * (absDelta / (Number(baseServings) || 1));
+          if (qty === 0) continue;
+          const change = sign * qty;
+
+          const [invRows] = await conn.query(
+            `SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1 FOR UPDATE`,
+            [userId, itemName, ing.unit || null, ing.unit || null]
+          );
+          if (invRows.length > 0) {
+            const rowInv = invRows[0];
+            let newQty = Number(rowInv.quantity || 0) + change;
+            if (!Number.isFinite(newQty)) newQty = 0;
+            await conn.query("UPDATE user_inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [newQty, rowInv.id]);
+          } else {
+            await conn.query("INSERT INTO user_inventory (user_id, item_name, quantity, unit) VALUES (?, ?, ?, ?)", [userId, itemName, change, ing.unit || null]);
+          }
+        }
+      } else {
+        // not applyNow: re-create scheduled user_inventory_changes for the mealplan to reflect newServ total
+        // remove existing scheduled rows for this mealplan
+        await conn.query("DELETE FROM user_inventory_changes WHERE mealplan_id = ?", [id]);
+
+        if (newServ !== 0) {
+          const recipeId = row.recipe_id;
+          const [ings2] = await conn.query(
+            `SELECT ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
+             FROM recipe_ingredients ri
+             LEFT JOIN recipe_instructions rins ON rins.recipe_id = ri.recipe_id
+             WHERE ri.recipe_id = ?`,
+            [recipeId]
+          );
+          const baseServings2 = (ings2 && ings2.length && ings2[0].base_servings) ? Number(ings2[0].base_servings) : 1;
+
+          for (const ing of (ings2 || [])) {
+            const itemName = String(ing.item_name || "").trim();
+            if (!itemName) continue;
+            const rawAmt = Number(ing.quantity || 0) || 0;
+            const qty = rawAmt * (newServ / (Number(baseServings2) || 1));
+            if (qty === 0) continue;
+            await conn.query(
+              `INSERT INTO user_inventory_changes (user_id, mealplan_id, item_name, delta, unit, scheduled_date)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [userId, id, itemName, -qty, ing.unit || null, scheduledDate]
+            );
+          }
+        }
+      }
+
+      await conn.commit();
+
+      // return updated row
+      const [updatedRows] = await conn.query(
+        `SELECT ump.id, ump.recipe_id AS recipeId, DATE_FORMAT(ump.scheduled_date, '%Y-%m-%d') AS date,
+                LOWER(ump.meal_type) AS mealType, ump.servings,
+                DATE_FORMAT(ump.created_at, '%Y-%m-%dT%H:%i:%sZ') AS created_at
+         FROM user_mealplan ump WHERE ump.id = ? AND ump.user_id = ?`,
+        [id, userId]
+      );
+
+      conn.release();
+      return reply.send({ ok: true, updated: updatedRows[0] || null });
+    } catch (err) {
+      try { await conn.rollback(); } catch (e) { /* ignore */ }
+      conn.release();
+      fastify.log.error(err);
+      return reply.status(500).send({ error: "Server error" });
+    }
+  });
+
+  // GET /api/user/mealplan - list
   fastify.get("/api/user/mealplan", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     try {
       const userId = request.user?.id;
@@ -236,7 +359,6 @@ export default fp(async function (fastify) {
 
       const [rows] = await fastify.db.query(sql, params);
 
-      // normalize and parse allergens into arrays
       const normalized = rows.map(r => ({
         id: r.id,
         recipeId: r.recipeId,
@@ -262,7 +384,7 @@ export default fp(async function (fastify) {
     }
   });
 
-  // DELETE by server id
+  // DELETE /api/user/mealplan/:id - delete and optionally refund
   fastify.delete("/api/user/mealplan/:id", { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const conn = await fastify.db.getConnection();
     try {
@@ -273,7 +395,6 @@ export default fp(async function (fastify) {
         return reply.status(400).send({ error: "Invalid id" });
       }
 
-      // fetch and validate the mealplan row (format date via SQL to avoid timezone drift)
       const [rows] = await conn.query(
         "SELECT id, recipe_id, DATE_FORMAT(scheduled_date, '%Y-%m-%d') AS scheduled_date, servings FROM user_mealplan WHERE id = ? AND user_id = ?",
         [id, userId]
@@ -283,32 +404,26 @@ export default fp(async function (fastify) {
         return reply.status(404).send({ error: "Not found" });
       }
       const row = rows[0];
-      const scheduledDate = row.scheduled_date; // already 'YYYY-MM-DD'
+      const scheduledDate = row.scheduled_date;
 
-      // parse applyNow query param (client requested immediate refund)
       const applyNowQuery = request.query?.applyNow;
       const applyNow = (applyNowQuery === "1" || applyNowQuery === "true" || applyNowQuery === 1 || applyNowQuery === true);
 
-      // compute server's UTC today (fallback)
       const todayUTC = new Date().toISOString().slice(0,10);
 
       await conn.beginTransaction();
 
-      // delete any scheduled inventory changes referencing this mealplan first (do not require user_id)
       await conn.query("DELETE FROM user_inventory_changes WHERE mealplan_id = ?", [id]);
 
-      // Decide if we should refund (apply positive deltas) — either client asked applyNow OR scheduledDate <= todayUTC
       const shouldRefund = applyNow || (scheduledDate && scheduledDate <= todayUTC);
 
       if (!shouldRefund) {
-        // future: already removed scheduled changes; just delete mealplan
         await conn.query("DELETE FROM user_mealplan WHERE id = ? AND user_id = ?", [id, userId]);
         await conn.commit();
         conn.release();
         return reply.send({ success: true });
       }
 
-      // today or client-requested: refund applied inventory (positive deltas) and delete mealplan
       const [ings] = await conn.query(
         `SELECT ri.item_name, ri.quantity, ri.unit, COALESCE(rins.base_servings, NULL) AS base_servings
          FROM recipe_ingredients ri
@@ -327,17 +442,15 @@ export default fp(async function (fastify) {
         const rawAmt = Number(ing.quantity || 0) || 0;
         const qty = rawAmt * (serv / (Number(baseServings) || 1));
         if (qty === 0) continue;
-        adjustments.push({ item_name: itemName, delta: qty, unit: ing.unit || null }); // positive refund
+        adjustments.push({ item_name: itemName, delta: qty, unit: ing.unit || null });
       }
 
-      // Apply refunds within the same transaction (row locks for update)
       for (const adj of adjustments) {
         const item_name = String(adj.item_name || "").trim();
         const delta = Number(adj.delta || 0);
         const unit = adj.unit || null;
         if (!item_name) continue;
 
-        // lock inventory row for update
         const [invRows] = await conn.query(
           `SELECT id, quantity FROM user_inventory WHERE user_id = ? AND item_name = ? AND (unit = ? OR (unit IS NULL AND ? IS NULL)) LIMIT 1 FOR UPDATE`,
           [userId, item_name, unit, unit]
@@ -352,7 +465,6 @@ export default fp(async function (fastify) {
         }
       }
 
-      // finally delete mealplan
       await conn.query("DELETE FROM user_mealplan WHERE id = ? AND user_id = ?", [id, userId]);
 
       await conn.commit();

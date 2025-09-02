@@ -1,4 +1,5 @@
 import fp from "fastify-plugin"; 
+//theme and shopping list is redundant but has been left for backwards compatibility
 
 export default fp(async function (fastify) {
   //Convert ISO 8601 to MySQL DATETIME format for DB

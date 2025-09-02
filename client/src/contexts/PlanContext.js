@@ -94,16 +94,6 @@ function readPrefsLocal() {
   }
 }
 
-/* Convert local display YYYY-MM-DD to the backend's UTC YYYY-MM-DD (treat local date as local midnight)
-   NOTE: kept for backward use in other code paths, but we do NOT use this when persisting plan entries.
-*/
-function localDateToUtcYMD(localYmd) {
-  if (!localYmd || typeof localYmd !== "string") return null;
-  // treat as local midnight, convert to UTC date string
-  const d = new Date(`${localYmd}T00:00:00`);
-  return d.toISOString().slice(0,10);
-}
-
 /* --- Context provider --- */
 
 export function PlanProvider({ children }) {
@@ -111,16 +101,12 @@ export function PlanProvider({ children }) {
   const [plan, setPlan] = useState(() => loadLocalPlan());
   const [loading, setLoading] = useState(false);
 
-  // inventory (kept locally; sync attempts made if token present)
-  // shape: { "<item_name>": number, ... }
   const [inventory, setInventory] = useState(() => loadLocalInventory());
 
   useEffect(() => {
-    // persist inventory on changes
     saveLocalInventory(inventory);
   }, [inventory]);
 
-  // helper: add locally and persist
   const addLocal = useCallback((key, entry) => {
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
@@ -237,8 +223,7 @@ export function PlanProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* --- Inventory: core function to adjust inventory for a recipe --- */
-  // kept as a utility for manual adjustments or offline adjustments (it will contact server if token present)
+  /* --- Inventory utilities --- */
   async function adjustInventoryForRecipe(recipeLike, servingsDelta) {
     const recipeId = recipeLike?.id ?? recipeLike?.recipeId ?? null;
     const base_servings = recipeLike?.base_servings ?? recipeLike?.recommended_servings ?? 1;
@@ -303,7 +288,7 @@ export function PlanProvider({ children }) {
       return next;
     });
 
-    // notify backend (only if token present)
+    // notify backend
     if (token) {
       try {
         const resAdj = await fetch(`${process.env.REACT_APP_API_URL}/api/user/inventory/adjust`, {
@@ -352,7 +337,6 @@ export function PlanProvider({ children }) {
     return negatives;
   }
 
-  /* --- Inventory sync helper --- */
   const syncInventoryFromServer = useCallback(async () => {
     if (!token) return;
     try {
@@ -361,7 +345,6 @@ export function PlanProvider({ children }) {
       });
       if (!res.ok) return;
       const payload = await res.json();
-      // backend returns { ok:true, inventory: [...] }
       const rows = Array.isArray(payload?.inventory) ? payload.inventory : [];
       const mapping = {};
       for (const r of rows) {
@@ -374,9 +357,8 @@ export function PlanProvider({ children }) {
     }
   }, [token]);
 
-  /* --- Core plan functions --- */
+  /* --- Core functions --- */
 
-  // helper: current local YYYY-MM-DD (client local date)
   function getLocalTodayYMD() {
     const t = new Date();
     const y = t.getFullYear();
@@ -404,18 +386,14 @@ export function PlanProvider({ children }) {
       addedAt: new Date().toISOString(),
     };
 
-    // optimistic local add
     addLocal(key, entry);
 
-    // Determine whether inventory tracking is enabled
     const prefs = readPrefsLocal();
     const trackInventory = !!prefs.user_inventory;
 
-    // Compute whether this date is the user's local today
     const localToday = getLocalTodayYMD();
     const applyNow = date === localToday;
 
-    // If user is offline and trackInventory is enabled, apply inventory locally now (offline UX)
     if (!token && trackInventory && applyNow) {
       try {
         await adjustInventoryForRecipe({ id: entry.recipeId, base_servings: meal.base_servings ?? meal.recommended_servings ?? 1 }, entry.servings);
@@ -426,14 +404,13 @@ export function PlanProvider({ children }) {
 
     if (!token) return { ok: true, saved: entry };
 
-    // Persist the mealplan to server (send local YYYY-MM-DD and include applyNow)
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           recipeId: entry.recipeId,
-          date: date,            // <-- send local YYYY-MM-DD (no timezone shift)
+          date: date,
           mealType: safeMealType,
           servings: entry.servings,
           applyNow: !!applyNow
@@ -448,7 +425,6 @@ export function PlanProvider({ children }) {
 
       const saved = await res.json();
 
-      // Merge server response into local plan (server date is authoritative)
       setPlan((prev) => {
         const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
         const idx = arr.findIndex((it) => it.clientId === entry.clientId);
@@ -485,7 +461,6 @@ export function PlanProvider({ children }) {
         return next;
       });
 
-      // Sync authoritative inventory from server (server applied or scheduled adjustments)
       if (trackInventory) {
         await syncInventoryFromServer();
       }
@@ -497,12 +472,14 @@ export function PlanProvider({ children }) {
     }
   }
 
-  // updateServings: adjust a plan item servings and inventory accordingly
+  // updateServings: adjust a plan item servings and inventory accordingly (server-side if possible)
   async function updateServings(key, indexOrMatcher, newServings) {
+    // optimistic local update
+    let oldItem = null;
+    let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
+
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
-      let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
-
       if (idx < 0) {
         if (typeof indexOrMatcher === "object" && indexOrMatcher !== null) {
           const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
@@ -515,55 +492,97 @@ export function PlanProvider({ children }) {
         return prev;
       }
 
-      const oldItem = arr[idx];
+      oldItem = arr[idx];
       const oldServ = Number(oldItem.servings ?? 1);
       const nextServ = Math.max(1, Math.round(Number(newServings) || 1));
       const delta = nextServ - oldServ;
-
       if (delta === 0) return prev;
 
       arr[idx] = { ...oldItem, servings: nextServ };
       const next = { ...prev, [key]: arr };
       saveLocalPlan(next);
-
-      // apply inventory adjustments asynchronously (do not block local update)
-      (async () => {
-        try {
-          const prefs = readPrefsLocal();
-          if (!prefs.user_inventory) return;
-
-          // derive scheduled date (local) from the plan key (key is "YYYY-MM-DD-mealtype")
-          const localDate = typeof key === "string" ? key.slice(0,10) : (oldItem.date || null);
-          const localToday = getLocalTodayYMD();
-          const isToday = localDate && localDate === localToday;
-
-          // offline: call adjustInventoryForRecipe (will update local storage only)
-          if (!token) {
-            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-            return;
-          }
-
-          // online + today's date: apply immediate adjustment via adjustInventoryForRecipe (server-backed)
-          if (isToday) {
-            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-            await syncInventoryFromServer();
-            return;
-          }
-
-          // online + future date: do nothing here (server will schedule changes via mealplan endpoints)
-        } catch (err) {
-          console.warn("updateServings inventory adjustment failed", err);
-        }
-      })();
-
       return next;
     });
 
-    return { ok: true };
+    if (!oldItem) return { ok: false, error: "not found" };
+
+    const delta = Number(newServings) - Number(oldItem.servings || 0);
+
+    const prefs = readPrefsLocal();
+    const trackInventory = !!prefs.user_inventory;
+
+    const localToday = getLocalTodayYMD();
+    const localDate = typeof key === "string" ? key.slice(0,10) : (oldItem.date || null);
+    const isToday = localDate && localDate === localToday;
+
+    // offline: local inventory adjust only for today
+    if (!token) {
+      if (trackInventory && delta !== 0 && isToday) {
+        try {
+          await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
+        } catch (err) {
+          console.warn("Offline inventory adjust failed", err);
+        }
+      }
+      return { ok: true };
+    }
+
+    // online + serverId: call PATCH
+    if (oldItem.serverId) {
+      try {
+        const applyNow = !!isToday;
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${oldItem.serverId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ servings: Number(newServings), applyNow })
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          console.warn("Server refused to update servings:", text);
+          if (typeof syncRange === "function" && localDate) {
+            await syncRange(localDate, localDate);
+          }
+          return { ok: false, error: text };
+        }
+
+        const payload = await res.json();
+        // merge server updated row (payload.updated)
+        if (payload && payload.updated) {
+          mergeServerIntoLocal([payload.updated]);
+        } else if (payload && payload.id) {
+          mergeServerIntoLocal([payload]);
+        }
+
+        if (trackInventory) {
+          await syncInventoryFromServer();
+        }
+
+        return { ok: true, saved: payload.updated ?? payload };
+      } catch (err) {
+        console.error("Failed to update servings on server", err);
+        if (typeof syncRange === "function" && localDate) {
+          await syncRange(localDate, localDate);
+        }
+        return { ok: false, error: err.message };
+      }
+    } else {
+      // no server id yet: local inventory adjust if today
+      if (trackInventory && delta !== 0 && isToday) {
+        try {
+          await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
+        } catch (err) {
+          console.warn("Local inventory adjust failed", err);
+        }
+      }
+      return { ok: true };
+    }
   }
 
   async function removeMeal(...args) {
-    // normalize args
     let key, index, serverId = null;
 
     if (args.length === 1 && typeof args[0] === "object") {
@@ -584,7 +603,6 @@ export function PlanProvider({ children }) {
       return { ok: false, error: "invalid args" };
     }
 
-    // remove locally (optimistic)
     let removedItem = null;
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
@@ -599,15 +617,12 @@ export function PlanProvider({ children }) {
     const prefs = readPrefsLocal();
     const trackInventory = !!prefs.user_inventory;
 
-    // If offline: we need to compensate locally (refund) only if the meal was applied locally (i.e. today)
     if (!token && trackInventory && removedItem && removedItem.recipeId) {
       try {
-        // derive scheduled date (local) from the key or removedItem.date
         const localDate = typeof key === "string" ? key.slice(0,10) : (removedItem.date || null);
         const localToday = getLocalTodayYMD();
 
         if (localDate && localDate === localToday) {
-          // refund inventory locally (adjustInventoryForRecipe will not call backend because token is falsy)
           await adjustInventoryForRecipe({ id: removedItem.recipeId, base_servings: removedItem.base_servings ?? removedItem.recommended_servings ?? 1 }, -Number(removedItem.servings ?? 0));
         }
       } catch (err) {
@@ -615,12 +630,8 @@ export function PlanProvider({ children }) {
       }
     }
 
-    // If server-side ID exists, ask server to delete. Server will:
-    //  - if applyNow or scheduled_date <= localToday: refund applied inventory on server and delete mealplan row
-    //  - else (future): remove rows from user_inventory_changes and delete mealplan
     if (token && serverId) {
       try {
-        // derive whether to ask server to refund applied inventory now
         const localDate = typeof key === "string" ? key.slice(0,10) : (removedItem?.date || null);
         const localToday = getLocalTodayYMD();
         const applyNowQuery = (localDate && localDate === localToday) ? "?applyNow=1" : "";
@@ -636,7 +647,6 @@ export function PlanProvider({ children }) {
           return { ok: false, error: t };
         }
 
-        // After server processed delete, re-sync inventory to stay authoritative
         if (trackInventory) {
           await syncInventoryFromServer();
         }
@@ -651,7 +661,6 @@ export function PlanProvider({ children }) {
     return { ok: true };
   }
 
-  // inventory accessors
   const getInventory = useCallback(() => (typeof inventory === "object" ? inventory : {}), [inventory]);
   const setInventoryLocal = useCallback((obj) => {
     setInventory(obj || {});
