@@ -1,5 +1,3 @@
-// Shared style constants to reduce redundancy
-
 export const cardStyle = {
   background: 'rgba(30, 41, 59, 0.6)',
   backdropFilter: 'blur(10px)',
