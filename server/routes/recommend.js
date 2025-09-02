@@ -35,10 +35,9 @@ export default fp(async function (fastify) {
       if (calories) { conditions.push(`rg.calories <= ?`); params.push(parseFloat(calories)); }
       if (carbs) { conditions.push(`rg.carbs >= ?`); params.push(parseFloat(carbs)); }
       if (protein) { conditions.push(`rg.protein >= ?`); params.push(parseFloat(protein)); }
-      if (fat) { conditions.push(`rg.fat <= ?`); params.push(parseFloat(fat)); }
+      if (fat) { conditions.push(`rg.fat >= ?`); params.push(parseFloat(fat)); }
       if (maxCost) { conditions.push(`rg.appx_cost <= ?`); params.push(parseFloat(maxCost)); }
-
-      // Diet & allergens filter
+      //Take dietary preferrence and allergies into account
       if (request.user) {
         const userDiet = request.user.diet_type || "any";
         const userAllergies = Array.isArray(request.user.allergens)
@@ -60,7 +59,7 @@ export default fp(async function (fastify) {
         });
       }
 
-      // Base SELECT
+      //Base SELECT
       let sql = `SELECT 
         rg.id,
         ANY_VALUE(rg.name) AS name,
@@ -72,33 +71,33 @@ export default fp(async function (fastify) {
         ANY_VALUE(rg.allergens) AS allergens,
         ANY_VALUE(rg.diet_type) AS diet_type,
         ANY_VALUE(ri.base_servings) AS base_servings,
-        ANY_VALUE(ri.appx_mass) AS appx_mass,        
+        ANY_VALUE(ri.appx_mass) AS appx_mass,
         ANY_VALUE(ri.image) AS image
       FROM recipe_general rg
       LEFT JOIN recipe_instructions ri ON ri.recipe_id = rg.id
-      LEFT JOIN recipe_ingredients AS ri2 ON rg.id = ri2.recipe_id
+      LEFT JOIN recipe_ingredients ri2 ON rg.id = ri2.recipe_id
       `;
+
+      // JOIN for inventory match
+      if (inventoryMatch === "true" && request.user) {
+        sql += ` LEFT JOIN user_inventory AS ui ON ui.user_id = ? AND ui.item_name = ri2.item_name `;
+        params.push(request.user.id);
+      }
 
       // WHERE
       if (conditions.length) {
         sql += " WHERE " + conditions.join(" AND ");
       }
 
-      // Inventory join & HAVING
-      if (inventoryMatch === "true" && request.user) {
-        sql += ` LEFT JOIN user_inventory AS ui ON ui.user_id = ? AND ui.item_name = ri2.item_name`;
-        params.push(request.user.id);
-      }
-
-      // GROUP BY
       sql += " GROUP BY rg.id";
 
+      // HAVING for inventory match
       if (inventoryMatch === "true" && request.user) {
         sql += ` HAVING (SUM(ui.quantity IS NOT NULL) >= 0.8 * COUNT(ri2.id))
                  AND (SUM(CASE WHEN (ri2.notes LIKE '%main%' OR ri2.notes LIKE '%main:%' OR ri2.notes LIKE '%main;%') AND ui.quantity IS NULL THEN 1 ELSE 0 END) = 0)`;
       }
 
-      // ORDER
+      // ORDER BY closest calories, then picks 5 random
       sql += ` ORDER BY ABS(rg.calories - ?) ASC, RAND() LIMIT 5`;
       params.push(parseFloat(calories) || 0);
 
@@ -126,7 +125,6 @@ export default fp(async function (fastify) {
       });
 
       reply.send(normalized);
-
     } catch (err) {
       fastify.log.error(err);
       reply.code(500).send({ error: "Server error" });

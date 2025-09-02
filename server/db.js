@@ -2,6 +2,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
 
+//Setup for MySQL server connection
 export const db = await mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQL_USER,
@@ -12,6 +13,6 @@ export const db = await mysql.createPool({
     rejectUnauthorized: false,
   } : false,
   waitForConnections: true,
-  connectionLimit: 10, // Adjust if needed
+  connectionLimit: 10,
   queueLimit: 0
 });   

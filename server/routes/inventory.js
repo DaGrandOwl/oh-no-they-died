@@ -24,7 +24,7 @@ export default fp(async function(fastify) {
     }
   });
 
-// GET known ingredients (used for not-in-inventory)
+  // GET known ingredients (used for not-in-inventory)
   fastify.get("/api/ingredients", async (request, reply) => {
     try {
       // master list is indexed by user_id = 0
