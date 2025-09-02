@@ -1,3 +1,4 @@
+// PlanContext.js (updated)
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "react-toastify";
@@ -5,18 +6,13 @@ import { toast } from "react-toastify";
 const PlanContext = createContext();
 
 function safeParseJSON(s, fallback = {}) {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(s); } catch { return fallback; }
 }
 
 function loadLocalPlan() {
   try {
     const raw = safeParseJSON(localStorage.getItem("mealPlan") || "{}", {});
     const normalized = {};
-
     for (const key of Object.keys(raw)) {
       const parts = String(key).split("-");
       if (parts.length >= 2) {
@@ -28,19 +24,12 @@ function loadLocalPlan() {
         normalized[key] = Array.isArray(raw[key]) ? raw[key] : [];
       }
     }
-
     return normalized;
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 function saveLocalPlan(plan) {
-  try {
-    localStorage.setItem("mealPlan", JSON.stringify(plan));
-  } catch (err) {
-    // ignore
-  }
+  try { localStorage.setItem("mealPlan", JSON.stringify(plan)); } catch (err) {}
 }
 
 function isValidDateYYYYMMDD(s) {
@@ -72,41 +61,20 @@ function parseTime(s) {
   return Number.isNaN(t) ? 0 : t;
 }
 
-/* --- Inventory helpers (local backup + server sync) --- */
-
-function loadLocalInventory() {
-  return safeParseJSON(localStorage.getItem("inventory") || "{}", {});
-}
-
-function saveLocalInventory(inv) {
-  try {
-    localStorage.setItem("inventory", JSON.stringify(inv));
-  } catch {}
-}
-
-// helper to read user's preferences quickly (non-hook) from localStorage
-function readPrefsLocal() {
-  try {
-    const p = safeParseJSON(localStorage.getItem("preferences") || "{}", {});
-    return p;
-  } catch {
-    return {};
-  }
-}
-
-/* --- Context provider --- */
+/* inventory helpers (local backup + server sync) */
+function loadLocalInventory() { return safeParseJSON(localStorage.getItem("inventory") || "{}", {}); }
+function saveLocalInventory(inv) { try { localStorage.setItem("inventory", JSON.stringify(inv)); } catch {} }
+function readPrefsLocal() { try { return safeParseJSON(localStorage.getItem("preferences") || "{}", {}); } catch { return {}; } }
 
 export function PlanProvider({ children }) {
   const { token } = useAuth();
   const [plan, setPlan] = useState(() => loadLocalPlan());
   const [loading, setLoading] = useState(false);
-
   const [inventory, setInventory] = useState(() => loadLocalInventory());
 
-  useEffect(() => {
-    saveLocalInventory(inventory);
-  }, [inventory]);
+  useEffect(() => { saveLocalInventory(inventory); }, [inventory]);
 
+  // helper: add locally and persist
   const addLocal = useCallback((key, entry) => {
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
@@ -117,20 +85,27 @@ export function PlanProvider({ children }) {
     });
   }, []);
 
+  // merge server rows into local plan (used by syncRange)
   const mergeServerIntoLocal = useCallback((serverRows) => {
     setPlan((prevLocal) => {
       const next = { ...prevLocal };
       const normalizedServer = {};
+
       (Array.isArray(serverRows) ? serverRows : []).forEach((r) => {
+        // r is expected to be a mealplan row returned by GET /api/user/mealplan
+        // r.id = user_mealplan.id
         const date = r.date;
         const mealType = (r.mealType || r.meal_type || "unknown").toString().toLowerCase();
         const key = `${date}-${mealType}`;
         normalizedServer[key] = normalizedServer[key] || [];
 
         const mapped = {
-          serverId: r.id ?? r.serverId ?? null,
-          recipeId: r.recipeId ?? r.recipe_id ?? r.recipeId ?? null,
-          id: r.recipeId ?? r.recipe_id ?? r.id ?? r.recipeId ?? null,
+          // canonical server-side mealplan identifier:
+          serverId: r.id ?? null,
+          mealplanId: r.id ?? r.mealplanId ?? null,
+          // recipe id (the recipe this mealplan row points to)
+          recipeId: r.recipeId ?? r.recipe_id ?? null,
+          // user-facing recipe metadata (safely copy)
           name: r.name ?? r.title ?? null,
           image: r.image ?? null,
           calories: r.calories ?? null,
@@ -140,20 +115,23 @@ export function PlanProvider({ children }) {
           allergens: Array.isArray(r.allergens) ? r.allergens : (typeof r.allergens === "string" ? r.allergens.split(",").map(s => s.trim()).filter(Boolean) : []),
           date: r.date,
           mealType: mealType,
-          servings: r.servings ?? 1,
+          servings: Number(r.servings ?? 1),
+          base_servings: r.base_servings ?? r.baseServings ?? null,
           created_at: r.created_at ?? r.createdAt ?? null
         };
 
         normalizedServer[key].push(mapped);
       });
 
+      // For each server key, merge server items into local arrays (server has priority for authoritative state)
       Object.keys(normalizedServer).forEach((key) => {
         const serverItems = normalizedServer[key];
         const localItems = Array.isArray(next[key]) ? [...next[key]] : [];
 
         serverItems.forEach((sItem) => {
-          const idxByServerId = localItems.findIndex(li => li.serverId && sItem.serverId && li.serverId === sItem.serverId);
-          const idxByClientId = localItems.findIndex(li => li.clientId && sItem.clientId && li.clientId === sItem.clientId);
+          // match by serverId first, then by recipeId (best-effort)
+          const idxByServerId = localItems.findIndex(li => li.serverId && sItem.serverId && String(li.serverId) === String(sItem.serverId));
+          const idxByClientId = localItems.findIndex(li => li.clientId && sItem.clientId && String(li.clientId) === String(sItem.clientId));
           const idxByRecipe = localItems.findIndex(li => (li.recipeId || li.id) && (sItem.recipeId || sItem.id) && String(li.recipeId || li.id) === String(sItem.recipeId || sItem.id));
 
           let idx = -1;
@@ -162,19 +140,33 @@ export function PlanProvider({ children }) {
           else if (idxByRecipe !== -1) idx = idxByRecipe;
 
           if (idx !== -1) {
+            // If local item exists, prefer server's newer data for authoritative fields
             const local = localItems[idx];
             const localTime = parseTime(local.addedAt || local.created_at || local.added_at || 0);
             const serverTime = parseTime(sItem.created_at || sItem.createdAt || 0);
 
-            if (serverTime > localTime) {
-              localItems[idx] = { ...local, ...sItem, clientId: local.clientId ?? null };
+            if (serverTime >= localTime) {
+              // merge server fields into local item but keep local clientId if present
+              localItems[idx] = {
+                ...local,
+                ...sItem,
+                serverId: sItem.serverId ?? local.serverId ?? null,
+                recipeId: sItem.recipeId ?? local.recipeId ?? null
+              };
             } else {
-              if (!local.serverId && sItem.serverId) {
-                localItems[idx] = { ...localItems[idx], serverId: sItem.serverId };
-              }
+              // keep local item but ensure serverId is set if available
+              localItems[idx] = {
+                ...local,
+                serverId: local.serverId ?? sItem.serverId ?? null,
+                recipeId: local.recipeId ?? sItem.recipeId ?? null
+              };
             }
           } else {
-            localItems.push(sItem);
+            // New server item -> append
+            localItems.push({
+              ...sItem,
+              clientId: null // server-origin items have no clientId
+            });
           }
         });
 
@@ -223,7 +215,7 @@ export function PlanProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* --- Inventory utilities --- */
+  /* --- Inventory helpers kept as in your code --- */
   async function adjustInventoryForRecipe(recipeLike, servingsDelta) {
     const recipeId = recipeLike?.id ?? recipeLike?.recipeId ?? null;
     const base_servings = recipeLike?.base_servings ?? recipeLike?.recommended_servings ?? 1;
@@ -288,7 +280,7 @@ export function PlanProvider({ children }) {
       return next;
     });
 
-    // notify backend
+    // notify backend (only if token present)
     if (token) {
       try {
         const resAdj = await fetch(`${process.env.REACT_APP_API_URL}/api/user/inventory/adjust`, {
@@ -357,7 +349,7 @@ export function PlanProvider({ children }) {
     }
   }, [token]);
 
-  /* --- Core functions --- */
+  /* --- Core plan functions --- */
 
   function getLocalTodayYMD() {
     const t = new Date();
@@ -373,8 +365,7 @@ export function PlanProvider({ children }) {
     const entry = {
       clientId: `c-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       recipeId: meal.id ?? meal.recipeId ?? null,
-      id: meal.id ?? meal.recipeId ?? null,
-      serverId: null,
+      serverId: null, // will be populated after server save
       name: meal.name ?? null,
       calories: meal.calories ?? null,
       protein: meal.protein ?? null,
@@ -383,20 +374,23 @@ export function PlanProvider({ children }) {
       image: meal.image || null,
       allergens: Array.isArray(meal.allergens) ? meal.allergens : (typeof meal.allergens === "string" ? meal.allergens.split(",").map(s => s.trim()).filter(Boolean) : []),
       servings: servings ?? meal.servings ?? 1,
+      base_servings: meal.base_servings ?? meal.recommended_servings ?? 1, // store base_servings on client side for accurate scaling
       addedAt: new Date().toISOString(),
+      date,
+      mealType: safeMealType
     };
 
+    // optimistic local add
     addLocal(key, entry);
 
     const prefs = readPrefsLocal();
     const trackInventory = !!prefs.user_inventory;
-
     const localToday = getLocalTodayYMD();
     const applyNow = date === localToday;
 
     if (!token && trackInventory && applyNow) {
       try {
-        await adjustInventoryForRecipe({ id: entry.recipeId, base_servings: meal.base_servings ?? meal.recommended_servings ?? 1 }, entry.servings);
+        await adjustInventoryForRecipe({ id: entry.recipeId, base_servings: entry.base_servings }, entry.servings);
       } catch (err) {
         console.warn("Offline inventory adjust failed", err);
       }
@@ -404,6 +398,7 @@ export function PlanProvider({ children }) {
 
     if (!token) return { ok: true, saved: entry };
 
+    // Persist the mealplan to server
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan`, {
         method: "POST",
@@ -413,7 +408,8 @@ export function PlanProvider({ children }) {
           date: date,
           mealType: safeMealType,
           servings: entry.servings,
-          applyNow: !!applyNow
+          applyNow: !!applyNow,
+          base_servings: entry.base_servings
         }),
       });
 
@@ -425,35 +421,34 @@ export function PlanProvider({ children }) {
 
       const saved = await res.json();
 
+      // saved is expected to be the joined row returned by backend GET after insert
+      // map server response to canonical local shape and merge into plan
       setPlan((prev) => {
         const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
         const idx = arr.findIndex((it) => it.clientId === entry.clientId);
+
+        const mapped = {
+          clientId: arr[idx]?.clientId ?? null,
+          serverId: saved.id ?? saved.serverId ?? null,
+          mealplanId: saved.id ?? saved.mealplanId ?? null,
+          recipeId: saved.recipeId ?? saved.recipe_id ?? entry.recipeId,
+          name: saved.name ?? entry.name,
+          image: saved.image ?? entry.image,
+          calories: saved.calories ?? entry.calories,
+          protein: saved.protein ?? entry.protein,
+          carbs: saved.carbs ?? entry.carbs,
+          fat: saved.fat ?? entry.fat,
+          allergens: Array.isArray(saved.allergens) ? saved.allergens : (typeof saved.allergens === "string" ? saved.allergens.split(",").map(s => s.trim()).filter(Boolean) : entry.allergens),
+          date: saved.date ?? saved.scheduled_date ?? date,
+          mealType: (saved.mealType || saved.meal_type || safeMealType).toString().toLowerCase(),
+          servings: saved.servings ?? entry.servings,
+          base_servings: saved.base_servings ?? entry.base_servings,
+          created_at: saved.created_at ?? saved.createdAt ?? new Date().toISOString()
+        };
+
         if (idx !== -1) {
-          arr[idx] = {
-            ...arr[idx],
-            ...saved,
-            serverId: saved.id ?? saved.serverId ?? arr[idx].serverId,
-            recipeId: saved.recipeId ?? saved.recipe_id ?? arr[idx].recipeId,
-            id: saved.recipeId ?? saved.recipe_id ?? arr[idx].id,
-            created_at: saved.created_at ?? saved.createdAt ?? arr[idx].created_at
-          };
+          arr[idx] = { ...arr[idx], ...mapped };
         } else {
-          const mapped = {
-            serverId: saved.id ?? saved.serverId ?? null,
-            recipeId: saved.recipeId ?? saved.recipe_id ?? saved.recipeId ?? null,
-            id: saved.recipeId ?? saved.recipe_id ?? saved.id ?? null,
-            name: saved.name ?? entry.name,
-            image: saved.image ?? entry.image,
-            calories: saved.calories ?? entry.calories,
-            protein: saved.protein ?? entry.protein,
-            carbs: saved.carbs ?? entry.carbs,
-            fat: saved.fat ?? entry.fat,
-            allergens: Array.isArray(saved.allergens) ? saved.allergens : (typeof saved.allergens === "string" ? saved.allergens.split(",").map(s => s.trim()).filter(Boolean) : entry.allergens),
-            date: saved.date ?? saved.scheduled_date ?? null,
-            mealType: (saved.mealType || saved.meal_type || safeMealType).toString().toLowerCase(),
-            servings: saved.servings ?? entry.servings,
-            created_at: saved.created_at ?? saved.createdAt ?? new Date().toISOString()
-          };
           arr.push(mapped);
         }
         const next = { ...prev, [key]: arr };
@@ -461,6 +456,7 @@ export function PlanProvider({ children }) {
         return next;
       });
 
+      // If inventory being tracked, sync authoritative inventory (server might have applied or scheduled adjustments)
       if (trackInventory) {
         await syncInventoryFromServer();
       }
@@ -472,18 +468,19 @@ export function PlanProvider({ children }) {
     }
   }
 
-   async function updateServings(key, indexOrMatcher, newServings) {
-    let savedServerId = null;
-    let oldItemLocal = null;
+  // UPDATE SERVINGS - persist to server when possible
+  async function updateServings(key, indexOrMatcher, newServings) {
+    // optimistic local update
+    let targetItem = null;
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
       let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
 
       if (idx < 0) {
         if (typeof indexOrMatcher === "object" && indexOrMatcher !== null) {
-          const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
-          const needle = indexOrMatcher.clientId ?? indexOrMatcher.serverId ?? indexOrMatcher.recipeId ?? null;
-          if (needle != null) idx = arr.findIndex(x => getId(x) === needle);
+          const getId = x => x.clientId ?? x.serverId ?? x.mealplanId ?? x.id ?? x.recipeId;
+          const needle = indexOrMatcher.clientId ?? indexOrMatcher.serverId ?? indexOrMatcher.mealplanId ?? indexOrMatcher.recipeId ?? null;
+          if (needle != null) idx = arr.findIndex(x => getId(x) === String(needle) || getId(x) === needle);
         }
       }
 
@@ -492,68 +489,110 @@ export function PlanProvider({ children }) {
       }
 
       const oldItem = arr[idx];
-      oldItemLocal = oldItem;
-      savedServerId = oldItem.serverId ?? null;
       const oldServ = Number(oldItem.servings ?? 1);
       const nextServ = Math.max(1, Math.round(Number(newServings) || 1));
       const delta = nextServ - oldServ;
 
-      if (delta === 0) return prev;
+      if (delta === 0) {
+        // nothing changed
+        return prev;
+      }
 
-      arr[idx] = { ...oldItem, servings: nextServ };
+      const updated = { ...oldItem, servings: nextServ };
+      arr[idx] = updated;
+      targetItem = updated;
       const next = { ...prev, [key]: arr };
       saveLocalPlan(next);
-
-      // apply inventory adjustments asynchronously
-      (async () => {
-        try {
-          const prefs = readPrefsLocal();
-          if (!prefs.user_inventory) return;
-
-          const localDate = typeof key === "string" ? key.slice(0,10) : (oldItem.date || null);
-          const localToday = getLocalTodayYMD();
-          const isToday = localDate && localDate === localToday;
-
-          if (!token) {
-            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-            return;
-          }
-
-          if (isToday) {
-            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-            await syncInventoryFromServer();
-            return;
-          }
-
-        } catch (err) {
-          console.warn("updateServings inventory adjustment failed", err);
-        }
-      })();
-
       return next;
     });
 
+    if (!targetItem) return { ok: false, error: "item not found" };
+
     (async () => {
       try {
-        if (!token) return;
-        if (!savedServerId) return;
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${savedServerId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ servings: Number(newServings) })
-        });
-        if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          console.warn("Failed to persist servings update:", t);
-        } else {
-          // on success, re-sync inventory to ensure consistency
-          try { await syncInventoryFromServer(); } catch (e) {}
+        const prefs = readPrefsLocal();
+        const trackInventory = !!prefs.user_inventory;
+
+        // derive scheduled local date from key
+        const localDate = typeof key === "string" ? key.slice(0,10) : (targetItem.date || null);
+        const localToday = getLocalTodayYMD();
+        const isToday = localDate && localDate === localToday;
+
+        // server-side identifier (mealplan row id) should be in serverId / mealplanId
+        const mealplanId = targetItem.serverId ?? targetItem.mealplanId ?? null;
+
+        if (mealplanId && token) {
+          try {
+            const applyNow = !!isToday;
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${mealplanId}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ servings: targetItem.servings, applyNow })
+            });
+
+            if (res.ok) {
+              const payload = await res.json(); // server returns { ok: true, updated: {...} }
+              const updatedServerRow = payload?.updated ?? null;
+
+              if (updatedServerRow && (updatedServerRow.id || updatedServerRow.servings != null)) {
+                // Merge authoritative server row into local item
+                setPlan((prev) => {
+                  const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
+                  const idx = arr.findIndex(it =>
+                    (it.serverId && updatedServerRow.id && String(it.serverId) === String(updatedServerRow.id)) ||
+                    (it.clientId && targetItem.clientId && it.clientId === targetItem.clientId)
+                  );
+                  if (idx !== -1) {
+                    arr[idx] = {
+                      ...arr[idx],
+                      serverId: updatedServerRow.id ?? arr[idx].serverId,
+                      mealplanId: updatedServerRow.id ?? arr[idx].mealplanId,
+                      servings: updatedServerRow.servings ?? arr[idx].servings,
+                      base_servings: updatedServerRow.base_servings ?? arr[idx].base_servings,
+                      date: updatedServerRow.date ?? arr[idx].date,
+                      mealType: ((updatedServerRow.mealType || updatedServerRow.meal_type) ?? arr[idx].mealType).toString().toLowerCase()
+                    };
+                  }
+                  const next = { ...prev, [key]: arr };
+                  saveLocalPlan(next);
+                  return next;
+                });
+
+                // ensure server authoritative inventory sync
+                if (trackInventory) {
+                  await syncInventoryFromServer();
+                }
+              } else {
+                // fallback: re-sync that date's range
+                await syncRange(localDate, localDate);
+                if (trackInventory) await syncInventoryFromServer();
+              }
+            } else {
+              // server refused; re-sync range so client reflects server
+              await syncRange(localDate, localDate);
+              // notify user
+              const t = await res.text().catch(() => "");
+              console.warn("Server PATCH /mealplan returned:", t);
+              toast.warn("Failed to persist servings change to server; sync attempted.");
+            }
+            return;
+          } catch (err) {
+            console.warn("Failed to PATCH mealplan:", err);
+            await syncRange(localDate, localDate);
+            return;
+          }
         }
+
+        // If no mealplanId (not yet persisted), but we are online & have token, best-effort: re-sync that date
+        if (token) {
+          await syncRange(localDate, localDate);
+        }
+
       } catch (err) {
-        console.warn("Failed to persist servings change", err);
+        console.warn("updateServings inventory adjustment failed", err);
       }
     })();
 
@@ -561,8 +600,8 @@ export function PlanProvider({ children }) {
   }
 
   async function removeMeal(...args) {
+    // same normalize-remove logic as before (unchanged)
     let key, index, serverId = null;
-
     if (args.length === 1 && typeof args[0] === "object") {
       ({ key, index, serverId = null } = args[0]);
     } else if (args.length >= 2 && typeof args[0] === "string" && typeof args[1] === "number") {
@@ -599,13 +638,10 @@ export function PlanProvider({ children }) {
       try {
         const localDate = typeof key === "string" ? key.slice(0,10) : (removedItem.date || null);
         const localToday = getLocalTodayYMD();
-
         if (localDate && localDate === localToday) {
-          await adjustInventoryForRecipe({ id: removedItem.recipeId, base_servings: removedItem.base_servings ?? removedItem.recommended_servings ?? 1 }, -Number(removedItem.servings ?? 0));
+          await adjustInventoryForRecipe({ id: removedItem.recipeId, base_servings: removedItem.base_servings ?? 1 }, -Number(removedItem.servings ?? 0));
         }
-      } catch (err) {
-        console.warn("Offline refund failed", err);
-      }
+      } catch (err) { console.warn("Offline refund failed", err); }
     }
 
     if (token && serverId) {
@@ -615,20 +651,14 @@ export function PlanProvider({ children }) {
         const applyNowQuery = (localDate && localDate === localToday) ? "?applyNow=1" : "";
         const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${serverId}${applyNowQuery}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
           const t = await res.text().catch(() => "");
           console.warn("Server failed to delete plan item", t);
           return { ok: false, error: t };
         }
-
-        if (trackInventory) {
-          await syncInventoryFromServer();
-        }
-
+        if (trackInventory) await syncInventoryFromServer();
         return { ok: true };
       } catch (err) {
         console.error("Delete request failed", err);
@@ -640,10 +670,7 @@ export function PlanProvider({ children }) {
   }
 
   const getInventory = useCallback(() => (typeof inventory === "object" ? inventory : {}), [inventory]);
-  const setInventoryLocal = useCallback((obj) => {
-    setInventory(obj || {});
-    saveLocalInventory(obj || {});
-  }, []);
+  const setInventoryLocal = useCallback((obj) => { setInventory(obj || {}); saveLocalInventory(obj || {}); }, []);
 
   return (
     <PlanContext.Provider value={{

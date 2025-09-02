@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react"; 
 import { X } from "lucide-react";
 import { useDrop } from "react-dnd";
 import { toast } from "react-toastify";
@@ -92,7 +92,8 @@ function PlannerCell({
   highlightedRecipe,
   plannerMode = false,
   minimized = false,
-  darkTheme = true
+  darkTheme = true,
+  updateServings
 }) {
   const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: "RECIPE",
@@ -139,8 +140,8 @@ function PlannerCell({
     verticalAlign: "top",
     cursor: highlight ? "pointer" : "default",
     position: 'relative',
-    overflow: 'visible', // Changed from 'hidden' to 'visible'
-    minWidth: '180px' // Added minimum width to ensure cells don't collapse too much
+    overflow: 'visible',
+    minWidth: '180px'
   } : {
     minHeight: 60,
     padding: "0.15rem",
@@ -150,8 +151,8 @@ function PlannerCell({
     verticalAlign: "top",
     cursor: highlight ? "pointer" : "default",
     position: 'relative',
-    overflow: 'visible', // Changed from 'hidden' to 'visible'
-    minWidth: '180px' // Added minimum width
+    overflow: 'visible',
+    minWidth: '180px'
   };
 
   const removeButtonStyle = darkTheme ? {
@@ -179,7 +180,7 @@ function PlannerCell({
     color: "#ef4444",
     marginLeft: 8
   };
-
+  
   return (
     <td
       ref={dropRef}
@@ -199,6 +200,9 @@ function PlannerCell({
         ) : (
           mergedMeals.map((meal, idx) => {
             const key = meal.clientId ? `c-${meal.clientId}` : `m-${meal.id ?? meal.recipeId ?? idx}`;
+            const keyStr = `${isoDate}-${String(mealTime).toLowerCase()}`;
+            const sourceIndex = (meal.__sourceIndices && meal.__sourceIndices.length) ? meal.__sourceIndices[0] : null;
+
             return (
               <div key={key} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <MealCard
@@ -211,6 +215,23 @@ function PlannerCell({
                   plannerMode={plannerMode}
                   minimized={minimized}
                   darkTheme={darkTheme}
+                  onServingsChange={async (newServ, mealData) => {
+                    try {
+                      if (typeof updateServings === "function" && sourceIndex !== null) {
+                        await updateServings(keyStr, sourceIndex, newServ);
+                      } else if (typeof updateServings === "function") {
+                        const matcher = {
+                          clientId: meal.clientId ?? mealData?.clientId ?? null,
+                          serverId: meal.serverId ?? mealData?.serverId ?? null,
+                          recipeId: meal.recipeId ?? meal.id ?? mealData?.recipeId ?? mealData?.id ?? null
+                        };
+                        await updateServings(keyStr, matcher, newServ);
+                      }
+                    } catch (err) {
+                      console.warn("Failed to persist servings change", err);
+                      toast.error("Failed to save servings change");
+                    }
+                  }}
                 />
                 <button
                   onClick={() => {
@@ -282,7 +303,7 @@ export default function WeekPlanner({
 
   const weekDates = useMemo(() => buildWeekDates(computeIsoForWeekday), [computeIsoForWeekday]);
   const { prefs } = usePreferences();
-  const { plan, addMeal, removeMeal, syncRange } = usePlan();
+  const { plan, addMeal, removeMeal, syncRange, updateServings } = usePlan();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null);
@@ -553,6 +574,7 @@ export default function WeekPlanner({
                     plannerMode={plannerMode}
                     minimized={minimized}
                     darkTheme={darkTheme}
+                    updateServings={updateServings}
                   />
                 );
               })}
