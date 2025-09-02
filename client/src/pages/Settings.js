@@ -5,7 +5,7 @@ import {
   Utensils,
   Shield,
 } from "lucide-react";
-import { cardStyle, buttonPrimary, buttonGhost } from "../Styles";
+import { cardStyle, buttonPrimary, buttonGhost } from "../components/Styles";
 
 // Styles for the new design
 const settingsStyles = {

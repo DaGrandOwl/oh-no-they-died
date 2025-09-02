@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Star, Heart, Clock, Users } from "lucide-react";
-import { buttonPrimary, cardStyle } from "../Styles";
+import { buttonPrimary, cardStyle } from "../components/Styles";
 
-const Home = () => {
+const StartPage = () => {
   const navigate = useNavigate();
   const [currentFeature, setCurrentFeature] = useState(0);
   const [animationState, setAnimationState] = useState("entering");
@@ -113,7 +113,7 @@ const Home = () => {
         
         <button 
           style={buttonPrimary}
-          onClick={() => navigate("/home")}
+          onClick={() => navigate("/login")}
         >
           Get Started <ChevronRight size={16} />
         </button>
@@ -260,4 +260,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default StartPage;

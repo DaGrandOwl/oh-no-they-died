@@ -1,11 +1,10 @@
 import { Outlet, NavLink } from "react-router-dom";
 import {
-  ShoppingCart,
+  Croissant,
   Utensils,
   Settings,
   Home,
 } from "lucide-react";
-import { usePreferences } from "../contexts/PrefContext";
 
 const sidebarStyles = {
   sidebar: {
@@ -95,8 +94,6 @@ const sidebarStyles = {
 };
 
 const Layout = () => {
-  const { prefs, updatePrefs } = usePreferences();
-
   const navLinkStyle = ({ isActive }) => ({
     ...sidebarStyles.navItem,
     ...(isActive ? sidebarStyles.navItemActive : {}),
@@ -104,7 +101,6 @@ const Layout = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar */}
       <aside style={sidebarStyles.sidebar}>
         <div style={sidebarStyles.brand}>
           <div style={sidebarStyles.logo}>MP</div>
@@ -113,16 +109,15 @@ const Layout = () => {
             <div style={sidebarStyles.brandSub}>Stay on track, effortlessly</div>
           </div>
         </div>
-        //Replace home with dashboard
         <nav style={sidebarStyles.nav}>
-          <NavLink to="/home" style={navLinkStyle}>
+          <NavLink to="/dashboard" style={navLinkStyle}>
             <Home style={{ width: "1rem", height: "1rem" }} />
-            Home
+            Dashboard
           </NavLink>
 
           <NavLink to="/inventory" style={navLinkStyle}>
-            <ShoppingCart style={{ width: "1rem", height: "1rem" }} />
-            Inventory
+            <Croissant style={{ width: "1rem", height: "1rem" }} />
+            Pantry
           </NavLink>
 
           <NavLink to="/recipe" style={navLinkStyle}>

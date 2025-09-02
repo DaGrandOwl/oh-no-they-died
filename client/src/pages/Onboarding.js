@@ -149,8 +149,7 @@ export default function OnboardingFlow() {
 
   const finishOnboarding = () => {
     persistSettings();
-    // navigate to dashboard - keep consistent with app routing
-    window.location.href = "/home";
+    window.location.href = "/dashboard";
   };
 
   const steps = [

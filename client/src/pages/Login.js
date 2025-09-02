@@ -66,7 +66,7 @@ function Login() {
       updatePrefs(mergedPrefs);
       localStorage.setItem('preferences', JSON.stringify(mergedPrefs));
 
-      navigate('/home');
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
       setError('An error occurred');

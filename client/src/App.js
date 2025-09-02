@@ -1,41 +1,36 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import './App.css';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Home from './pages/Home.js';
-import Dashboard from './pages/Dashboard.js';
+import Onboarding from './pages/Onboarding.js';
+import StartPage from './pages/StartPage.js';
 import About from './pages/About.js';
+import Dashboard from './pages/Dashboard.js';
 import RecipeID from './pages/RecipeID.js';
 import RecipeList from './pages/RecipeList.js';
-import Onboarding from './pages/Onboarding.js';
-import Settings from './pages/Settings.js';
 import Inventory from './pages/Inventory.js';
+import Settings from './pages/Settings.js';
 // Components
 import PrivateRoute from './components/PrivateRoute';
-import Recommendations from './pages/Recommendations.js';
 import Layout from './components/Layout.js';
-
 
 function App() {
   return (
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<StartPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-
-          <Route path="/test" element={<Recommendations />} /> {/* temp */}
           
-          {/* Routes with Layout (Sidebar) */}
-          <Route element={<Layout />}> 
-            <Route path="/settings" element={<Settings />} />   
-            <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} /> 
-            <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+          {/* Logged in users only */}
+          <Route element={<PrivateRoute><Layout /></PrivateRoute>}> 
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/inventory" element={<Inventory />} /> 
             <Route path="/recipe" element={<RecipeList />} />
             <Route path="/recipe/:id" element={<RecipeID />} />
+            <Route path="/settings" element={<Settings />} />   
           </Route>
         </Routes>
       </BrowserRouter>

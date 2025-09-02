@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { Search, X, Utensils, Zap, Wheat, Dumbbell, Droplet } from "lucide-react";
-import { cardStyle, buttonIcon, inputStyle } from "../Styles";
+import { cardStyle, buttonIcon, inputStyle } from "../components/Styles";
 import "react-toastify/dist/ReactToastify.css";
 
 
