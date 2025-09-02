@@ -50,6 +50,11 @@ await fastify.register(recommendRoutes);
 await fastify.register(inventoryRoutes);
 await fastify.register(inventoryProcessor);
 
+//Root route displays a message
+fastify.get('/', async (request, reply) => {
+  return { message: 'API is running' };
+});
+
 //Start
 const start = async () => {
   try {

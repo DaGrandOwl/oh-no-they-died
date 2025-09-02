@@ -23,13 +23,12 @@ function App() {
           <Route path="/about" element={<About />} />
 
           {/* Only for users not logged in*/}
-          <Route element={<UnauthenticatedRoute />} >
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
+          <Route path="/login" element={<UnauthenticatedRoute><Login /></UnauthenticatedRoute>} />
+          <Route path="/register" element={<UnauthenticatedRoute><Register /></UnauthenticatedRoute>} />
 
-          <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
           {/* Logged in users only */}
+          <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
+          {/*Layout Sidebar */}
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}> 
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} /> 

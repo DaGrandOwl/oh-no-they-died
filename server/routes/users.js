@@ -48,8 +48,8 @@ export default fp(async function (fastify, opts) {
 
       // Insert default preferences until user sets their own
       await fastify.db.query(
-        'INSERT INTO user_preferences (user_id, theme, allergens, user_inventory, shopping_list, updated_at) VALUES (?, ?, ?, ?, ?, NOW())',
-        [userId, 'light', '[]', '0', '0']
+        'INSERT INTO user_preferences (user_id, diet_type, allergens, user_inventory, updated_at) VALUES (?, ?, ?, ?, NOW())',
+        [userId, '[]', '[]', '0']
       );
 
 
@@ -104,13 +104,14 @@ export default fp(async function (fastify, opts) {
 
       // Fetch preferences from DB if any
       const [prefsRows] = await fastify.db.query(
-        'SELECT theme, allergens, user_inventory, shopping_list, updated_at FROM user_preferences WHERE user_id = ?',
+        'SELECT  allergens, diet_type, user_inventory, updated_at FROM user_preferences WHERE user_id = ?',
         [user.id]
       );
 
       let preferences = {};
       if (prefsRows.length > 0) {
         const row = prefsRows[0];
+
         // Ensure allergens is parsed correctly
         let allergens = [];
         try {
@@ -118,11 +119,18 @@ export default fp(async function (fastify, opts) {
         } catch {
           allergens = [];
         }
+
+        let diet_type = [];
+        try {
+          diet_type = row.diet_type ? JSON.parse(row.diet_type) : [];
+        } catch {
+          diet_type = [];
+        }
+
         preferences = {
-          theme: row.theme,
           allergens,
+          diet_type,
           user_inventory: !!row.user_inventory,
-          shopping_list: !!row.shopping_list,  
           updated_at: row.updated_at
         };
       }
