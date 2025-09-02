@@ -121,7 +121,7 @@ export default function Dashboard() {
   // Load initial results on component mount
   useEffect(() => {
     searchRecipes();
-  }, []); // Empty dependency array to run only once on mount
+  }, []);
 
   function startHighlight(recipeWithServings) {
     setHighlightedRecipe(recipeWithServings);

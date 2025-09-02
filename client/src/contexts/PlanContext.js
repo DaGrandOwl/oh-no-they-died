@@ -472,14 +472,13 @@ export function PlanProvider({ children }) {
     }
   }
 
-  // updateServings: adjust a plan item servings and inventory accordingly (server-side if possible)
-  async function updateServings(key, indexOrMatcher, newServings) {
-    // optimistic local update
-    let oldItem = null;
-    let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
-
+   async function updateServings(key, indexOrMatcher, newServings) {
+    let savedServerId = null;
+    let oldItemLocal = null;
     setPlan((prev) => {
       const arr = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      let idx = typeof indexOrMatcher === "number" ? indexOrMatcher : -1;
+
       if (idx < 0) {
         if (typeof indexOrMatcher === "object" && indexOrMatcher !== null) {
           const getId = x => x.clientId ?? x.serverId ?? x.id ?? x.recipeId;
@@ -492,94 +491,73 @@ export function PlanProvider({ children }) {
         return prev;
       }
 
-      oldItem = arr[idx];
+      const oldItem = arr[idx];
+      oldItemLocal = oldItem;
+      savedServerId = oldItem.serverId ?? null;
       const oldServ = Number(oldItem.servings ?? 1);
       const nextServ = Math.max(1, Math.round(Number(newServings) || 1));
       const delta = nextServ - oldServ;
+
       if (delta === 0) return prev;
 
       arr[idx] = { ...oldItem, servings: nextServ };
       const next = { ...prev, [key]: arr };
       saveLocalPlan(next);
+
+      // apply inventory adjustments asynchronously
+      (async () => {
+        try {
+          const prefs = readPrefsLocal();
+          if (!prefs.user_inventory) return;
+
+          const localDate = typeof key === "string" ? key.slice(0,10) : (oldItem.date || null);
+          const localToday = getLocalTodayYMD();
+          const isToday = localDate && localDate === localToday;
+
+          if (!token) {
+            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
+            return;
+          }
+
+          if (isToday) {
+            await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
+            await syncInventoryFromServer();
+            return;
+          }
+
+        } catch (err) {
+          console.warn("updateServings inventory adjustment failed", err);
+        }
+      })();
+
       return next;
     });
 
-    if (!oldItem) return { ok: false, error: "not found" };
-
-    const delta = Number(newServings) - Number(oldItem.servings || 0);
-
-    const prefs = readPrefsLocal();
-    const trackInventory = !!prefs.user_inventory;
-
-    const localToday = getLocalTodayYMD();
-    const localDate = typeof key === "string" ? key.slice(0,10) : (oldItem.date || null);
-    const isToday = localDate && localDate === localToday;
-
-    // offline: local inventory adjust only for today
-    if (!token) {
-      if (trackInventory && delta !== 0 && isToday) {
-        try {
-          await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-        } catch (err) {
-          console.warn("Offline inventory adjust failed", err);
-        }
-      }
-      return { ok: true };
-    }
-
-    // online + serverId: call PATCH
-    if (oldItem.serverId) {
+    (async () => {
       try {
-        const applyNow = !!isToday;
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${oldItem.serverId}`, {
+        if (!token) return;
+        if (!savedServerId) return;
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/user/mealplan/${savedServerId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ servings: Number(newServings), applyNow })
+          body: JSON.stringify({ servings: Number(newServings) })
         });
-
         if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          console.warn("Server refused to update servings:", text);
-          if (typeof syncRange === "function" && localDate) {
-            await syncRange(localDate, localDate);
-          }
-          return { ok: false, error: text };
+          const t = await res.text().catch(() => "");
+          console.warn("Failed to persist servings update:", t);
+        } else {
+          // on success, re-sync inventory to ensure consistency
+          try { await syncInventoryFromServer(); } catch (e) {}
         }
-
-        const payload = await res.json();
-        // merge server updated row (payload.updated)
-        if (payload && payload.updated) {
-          mergeServerIntoLocal([payload.updated]);
-        } else if (payload && payload.id) {
-          mergeServerIntoLocal([payload]);
-        }
-
-        if (trackInventory) {
-          await syncInventoryFromServer();
-        }
-
-        return { ok: true, saved: payload.updated ?? payload };
       } catch (err) {
-        console.error("Failed to update servings on server", err);
-        if (typeof syncRange === "function" && localDate) {
-          await syncRange(localDate, localDate);
-        }
-        return { ok: false, error: err.message };
+        console.warn("Failed to persist servings change", err);
       }
-    } else {
-      // no server id yet: local inventory adjust if today
-      if (trackInventory && delta !== 0 && isToday) {
-        try {
-          await adjustInventoryForRecipe({ id: oldItem.recipeId, base_servings: oldItem.base_servings ?? oldItem.recommended_servings ?? 1 }, delta);
-        } catch (err) {
-          console.warn("Local inventory adjust failed", err);
-        }
-      }
-      return { ok: true };
-    }
+    })();
+
+    return { ok: true };
   }
 
   async function removeMeal(...args) {
