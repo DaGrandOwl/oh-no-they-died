@@ -198,9 +198,9 @@ function PlannerCell({
                   plannerMode={plannerMode}
                   minimized={minimized}
                   darkTheme={darkTheme}
-                  showRemoveButton={true} // Enable remove button
-                  onRemove={onRemove} // Pass remove handler
-                  removeData={removeData} // Pass remove data
+                  showRemoveButton={true}
+                  onRemove={onRemove}
+                  removeData={removeData}
                 />
               </div>
             );
@@ -220,12 +220,10 @@ export default function WeekPlanner({
   darkTheme = false,
   ...rest 
 }) {
-  // weekOffset: 0 -> current week; -1 previous; +1 next, etc.
+
   const [weekOffset, setWeekOffset] = useState(0);
 
-  // helper to build isoDate based on weekday + weekOffset
   const computeIsoForWeekday = useCallback((weekdayKey) => {
-    // weekdayKey is "sunday", "monday", etc.
     // find the date for sunday of the target week then add offset
     const targetWeekStart = (() => {
       const today = new Date();
@@ -240,7 +238,7 @@ export default function WeekPlanner({
     if (idx === -1) return null;
     const d = new Date(targetWeekStart);
     d.setDate(targetWeekStart.getDate() + idx);
-    // return local YYYY-MM-DD (used for display and for backend conversion)
+    // return local YYYY-MM-DD
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -260,7 +258,6 @@ export default function WeekPlanner({
     setConfirmOpen(false);
     setPending(null);
     await handleDropMeal(recipe, isoDate, mealTime);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, addMeal, removeMeal, plan]);
 
   const cancelPending = useCallback(() => {
@@ -301,7 +298,7 @@ export default function WeekPlanner({
       sourceIndex = srcArr.findIndex(it => (it.clientId && recipe.clientId && it.clientId === recipe.clientId) || (it.serverId && recipe.serverId && it.serverId === recipe.serverId) || (String(getRecipeId(it)) === String(droppedRecipeId)));
     }
 
-    // If the dragged item originated from the planner itself and nothing changed — ignore
+    // If the dragged item originated from the planner itself and nothing changed, ignore
     if (sourceKey && sourceKey === targetKey && sourceIndex !== -1 && existingIdx !== -1 && sourceIndex === existingIdx) return;
 
     // if existing found -> merge servings
@@ -309,11 +306,10 @@ export default function WeekPlanner({
       const existing = targetArr[existingIdx];
       const combinedServings = Number(existing.servings ?? 0) + droppedServings;
 
-      // remove existing entry first (so local display doesn't show duplicate)
+      // remove existing entry first
       try {
         await removeMeal({ key: targetKey, index: existingIdx, serverId: existing.serverId ?? null });
       } catch (err) {
-        // best-effort
       }
 
       // if the drop originated from a different cell, remove original too
@@ -325,7 +321,6 @@ export default function WeekPlanner({
           try {
             await removeMeal({ key: sourceKey, index: matchIdx, serverId: sourceArr[matchIdx].serverId ?? null });
           } catch (err) {
-            // ignore
           }
         }
       }
@@ -344,7 +339,6 @@ export default function WeekPlanner({
         try {
           await removeMeal({ key: sourceKey, index: matchIdx, serverId: srcArr[matchIdx].serverId ?? null });
         } catch (err) {
-          // ignore
         }
       }
     }
@@ -397,7 +391,6 @@ export default function WeekPlanner({
     return `${y}-${m}-${d}`;
   })();
 
-  // NEW: Container styling based on theme
   const containerStyle = darkTheme ? {
     padding: 16,
     color: '#f8fafc'
@@ -426,13 +419,13 @@ export default function WeekPlanner({
     borderSpacing: "0 4px",
     background: 'rgba(30, 41, 59, 0.3)',
     borderRadius: '0.5rem',
-    overflow: 'visible', // Changed from 'hidden' to 'visible'
-    tableLayout: 'auto' // Changed from 'fixed' to 'auto'
+    overflow: 'visible',
+    tableLayout: 'auto'
   } : {
     width: "100%", 
     borderCollapse: "separate",
     borderSpacing: "0 4px",
-    tableLayout: 'auto' // Changed from 'fixed' to 'auto'
+    tableLayout: 'auto'
   };
 
   const thStyle = darkTheme ? {

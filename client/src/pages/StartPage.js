@@ -44,7 +44,7 @@ const StartPage = () => {
       setTimeout(() => {
         setCurrentFeature((prev) => (prev + 1) % features.length);
         setAnimationState("entering");
-      }, 500); // Half of the transition time
+      }, 500);
     }, 4000);
     
     return () => clearInterval(interval);
@@ -193,7 +193,7 @@ const StartPage = () => {
         position: "relative",
         zIndex: 10
       }}>
-        {/* First column - offset upward */}
+        {/* First column */}
         <div style={{
           ...cardStyle,
           transform: "translateY(-40px)",
@@ -206,7 +206,7 @@ const StartPage = () => {
           </p>
         </div>
 
-        {/* Second column - middle (not offset) */}
+        {/* Second column */}
         <div style={{
           ...cardStyle,
           transition: "transform 0.3s ease"
@@ -217,7 +217,7 @@ const StartPage = () => {
           </p>
         </div>
 
-        {/* Third column - offset upward */}
+        {/* Third column */}
         <div style={{
           ...cardStyle,
           transform: "translateY(-40px)",

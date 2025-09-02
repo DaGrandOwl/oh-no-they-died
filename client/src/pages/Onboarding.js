@@ -146,7 +146,7 @@ const styles = {
     lineHeight: "1.5"
   },
 
-  // Settings-style components
+  // Settings-style
   settingItem: {
     display: "flex",
     alignItems: "center",

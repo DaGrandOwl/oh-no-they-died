@@ -85,7 +85,7 @@ export default function RecipeID() {
   //Recipe scaling state
   const [servings, setServings] = useState(1);
   const [sizeInput, setSizeInput] = useState(100);
-  const [mode, setMode] = useState("servings"); // "servings" | "size"
+  const [mode, setMode] = useState("servings");
 
   //Nutrition scaling state
   const [nutritionMode, setNutritionMode] = useState("servings"); 
@@ -183,7 +183,6 @@ export default function RecipeID() {
       padding: '2rem'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* NEW: Utensils Title */}
         <div style={{ 
           textAlign: 'center', 
           marginBottom: '2rem',

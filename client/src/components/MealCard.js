@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDrag } from "react-dnd";
 import { usePlan } from "../contexts/PlanContext";
-import { X } from "lucide-react"; // Add this import
+import { X } from "lucide-react";
 
 export default function MealCard({
   recipe,
@@ -16,21 +16,19 @@ export default function MealCard({
   onServingsChange = null,
   plannerMode = false,
   minimized = false,
-  showRemoveButton = false, // New prop to control remove button visibility
-  onRemove = null, // New prop for remove functionality
-  removeData = null // New prop for remove data (key, index, etc.)
+  showRemoveButton = false,
+  onRemove = null,
+  removeData = null
 }) {
   const data = recipe || item;
   const { updateServings } = usePlan();
 
-  // Set initial servings based on data. If not present, default to 1.
   const initialServings = useMemo(() => {
     if (!data) return 1;
     if (data.servings != null) return Math.max(1, Math.round(Number(data.servings)));
     if (data.recommended_servings != null) return Math.max(1, Math.round(Number(data.recommended_servings)));
     if (data.base_servings != null) return Math.max(1, Math.round(Number(data.base_servings)));
     return 1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data && (data.servings ?? data.recommended_servings ?? data.base_servings)]);
 
   const [servings, setServings] = useState(initialServings);
@@ -67,7 +65,6 @@ export default function MealCard({
 
   if (!data) return null;
 
-  // change servings locally; if in planner and item is from plan then call updateServings
   function changeServings(delta) {
     setServings((s) => {
       const next = Math.max(1, Math.round((s || 0) + delta));
@@ -118,20 +115,16 @@ export default function MealCard({
     }
   }
 
-  // whole-card click => view
   function handleCardClick(e) {
     if (isDragging) return;
     if (!data.id) return;
     window.location.href = `/recipe/${data.id}`;
   }
 
-  // Minimized state (used by planner): make image smaller but still visible
   const isMinimized = plannerMode && minimized && !isHovered;
 
-  // ALWAYS show image when present (we ignore hideImage for display logic)
   const hasImage = !!data.image;
 
-  // compute base servings to scale macros
   const baseServings = Number(data.base_servings ?? data.recommended_servings ?? 1) || 1;
   const scale = Number(servings) / baseServings;
 
@@ -140,7 +133,7 @@ export default function MealCard({
   const displayCarbs = Math.round(((data.carbs ?? 0) * scale) * 10) / 10;
   const displayFat = Math.round(((data.fat ?? 0) * scale) * 10) / 10;
 
-  // ---- styles (single unified theme) ----
+  // ---- styles  ----
   const removeButtonStyle = {
     position: 'absolute',
     top: 2,
@@ -178,10 +171,9 @@ export default function MealCard({
     transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
     boxShadow: isHovered ? '0 10px 20px rgba(0,0,0,0.45)' : '0 4px 10px rgba(0,0,0,0.3)',
     overflow: "hidden",
-    position: 'relative' // Added for absolute positioning of remove button
+    position: 'relative'
   };
 
-  // image always shown when available; scale down for minimized
   const imageContainerStyle = {
     width: isMinimized ? 36 : (compact ? 48 : 88),
     height: isMinimized ? 36 : (compact ? 48 : 66),
@@ -323,7 +315,6 @@ export default function MealCard({
             onDragStart={(e) => e.preventDefault()}
           />
         ) : (
-          // fallback: initials
           <div style={{ padding: 4, fontSize: isMinimized ? 10 : 12, lineHeight: '1.1', textAlign: 'center', color: "#c7b3ff" }}>
             {(data.name || "").split(/\s+/).map(n => n[0]).slice(0,2).join("").toUpperCase()}
           </div>
@@ -390,7 +381,7 @@ export default function MealCard({
             style={addButtonSmall}
             aria-label={`Add ${data.name} to plan`}
           >
-            ➕
+            +
           </button>
 
           <button

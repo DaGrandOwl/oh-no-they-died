@@ -41,7 +41,7 @@ export default function Register() {
         return;
       }
 
-      // Auto-login: store token
+      // Auto-login
       localStorage.setItem('token', data.token);
 
       // Initialize empty preferences with timestamp

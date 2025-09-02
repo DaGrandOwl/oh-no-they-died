@@ -49,7 +49,7 @@ function Login() {
       // Update Auth Context
       login({ id: data.user.id, email: data.user.email }, data.token);
 
-      // Merge preferences: prefer DB if newer
+      // Merge preferences
       const localRaw = localStorage.getItem('preferences');
       const localPrefs = localRaw ? JSON.parse(localRaw) : {};
       const dbPrefs = data.preferences || {};
