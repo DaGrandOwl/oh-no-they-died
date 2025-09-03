@@ -21,11 +21,7 @@ const DEFAULT_ORIGINS = [
   'http://localhost:3000' //for testing
 ];
 
-const envOrigins = (process.env.CORS_ORIGINS || DEFAULT_ORIGINS.join(','))
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-ly
+const envOrigins = (process.env.CORS_ORIGINS || DEFAULT_ORIGINS.join(',')).split(',').map(s => s.trim()).filter(Boolean);
 await fastify.register(cors, {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
