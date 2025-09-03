@@ -4,7 +4,8 @@ A full-stack **meal planning and inventory management web app** that helps users
 
 This project was built for Scholastica Tech Summit'25 for 'Innovator's Arena' segment
 
-View the webpage on **https://oh-no-they-died.vercel.app**<br>
+**View the webpage on https://oh-no-they-died.vercel.app**<br>
+
 Backend may take a bit to load on first use as it goes to sleep after inactivity. <br>
 Please be patient, you may check server status directly on **oh-no-they-died.onrender.com/**. <br>
 If server does not respond in approx. 1-2 mins, view this link to restart it https://api.render.com/deploy/srv-d1t97b7fte5s73c4sn7g?key=6fSZntm0nFk
