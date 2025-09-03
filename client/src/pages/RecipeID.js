@@ -59,9 +59,9 @@ function scaleNutritionFacts(text, servings, baseServings, size, selectedSize, m
       const [, name, num, unit, dv] = match;
       let value;
       if (mode === "servings") {
-        value = parseFloat(num) * servings / baseServings;
+        value = parseFloat(num) * servings ;
       } else {
-        value = parseFloat(num) * selectedSize / size;
+        value = parseFloat(num) * selectedSize / (size/baseServings);
       }
 
       nutrition.push({

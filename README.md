@@ -9,9 +9,9 @@ Backend may take a bit to load on first use as it goes to sleep after inactivity
 
 For demo account, use email "demo@test" with password "demo". Demo example: <br>
 1) Try searching through Dashboard page recommendations for a Breakfast meal over 200 calories 
-2) Add found result to Thursday Breakfast
+2) Add found result to Thursday Breakfast. Clicking on mealcard views full page
 3) Check what ingredient you may run out in a week using Pantry page
-4) Say you want a 'pancake' recipe specifically, search for it through recipes page. Click on it to view full page.
+4) Say you want a 'banana bread' recipe specifically, search for it through recipes page. Click on it to view full page.
 
 (Database has been filled with limited entries to give a demo only)<br>
 (.env files needed to run locally have not been shared on this repository since website includes all functionalities)
