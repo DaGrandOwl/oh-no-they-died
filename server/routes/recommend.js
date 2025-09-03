@@ -100,16 +100,30 @@ export default fp(async function (fastify) {
       const desiredServings = servings != null ? Number(servings) : null;
       const normalized = (rows || []).map(r => {
         const baseServ = r.base_servings != null ? Number(r.base_servings) : 1;
-        const recommended_servings = desiredServings ? Math.max(1, Math.round(desiredServings)) : Math.max(1, Math.round(baseServ));
+        const recommended_servings = desiredServings && Number.isFinite(Number(desiredServings)) ? Math.max(1, Math.round(Number(desiredServings))) : Math.max(1, Math.round(baseServ || 1));
+        const perCal = (r.calories != null && !Number.isNaN(Number(r.calories))) ? Number(r.calories) : null;
+        const perProtein = (r.protein != null && !Number.isNaN(Number(r.protein))) ? Number(r.protein) : null;
+        const perCarbs = (r.carbs != null && !Number.isNaN(Number(r.carbs))) ? Number(r.carbs) : null;
+        const perFat = (r.fat != null && !Number.isNaN(Number(r.fat))) ? Number(r.fat) : null;
+        const scale = Number(recommended_servings) || 1;
+        const totalCalories = perCal != null ? Math.round(perCal * scale) : null;
+        const totalProtein = perProtein != null ? Math.round((perProtein * scale) * 10) / 10 : null;
+        const totalCarbs = perCarbs != null ? Math.round((perCarbs * scale) * 10) / 10 : null;
+        const totalFat = perFat != null ? Math.round((perFat * scale) * 10) / 10 : null;
         return {
           id: r.id,
           name: r.name,
           image: r.image || null,
-          calories: r.calories,
-          protein: r.protein,
-          carbs: r.carbs,
-          fat: r.fat,
-          appx_cost: r.appx_cost,
+          calories_per_serving: perCal,
+          protein_per_serving: perProtein,
+          carbs_per_serving: perCarbs,
+          fat_per_serving: perFat,
+          calories: totalCalories,
+          protein: totalProtein,
+          carbs: totalCarbs,
+          fat: totalFat,
+
+          appx_cost: r.appx_cost != null ? Number(r.appx_cost) : null,
           base_servings: baseServ,
           appx_mass: r.appx_mass != null ? Number(r.appx_mass) : null,
           allergens: r.allergens ? String(r.allergens).split(",").map(s => s.trim()).filter(Boolean) : [],
