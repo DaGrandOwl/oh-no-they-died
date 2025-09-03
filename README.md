@@ -4,7 +4,8 @@ A full-stack **meal planning and inventory management web app** that helps users
 
 This project was built for Scholastica Tech Summit'25 for 'Innovator's Arena' segment
 
-View the webpage on **https://oh-no-they-died.vercel.app**
+View the webpage on **https://oh-no-they-died.vercel.app**<br>
+Backend may take a bit to load on first use as it goes to sleep after inactivity. Please be patient.
 
 For demo account, use email "demo@test" with password "demo". Demo example: <br>
 1) Try searching through Dashboard page recommendations for a Breakfast meal over 200 calories 
