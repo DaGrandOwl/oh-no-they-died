@@ -14,15 +14,33 @@ import inventoryProcessor from './routes/InventoryProcessor.js';
 
 dotenv.config();
 
-const fastify = Fastify({ logger: true }); 
+const fastify = Fastify({ logger: true });
 
-// CORS has been enabled for certain URLs only
+const DEFAULT_ORIGINS = [
+  'https://oh-no-they-died.vercel.app',
+  'http://localhost:3000' //for testing
+];
+
+const envOrigins = (process.env.CORS_ORIGINS || DEFAULT_ORIGINS.join(','))
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+ly
 await fastify.register(cors, {
-  origin: ['https://oh-no-they-died.vercel.app','http://localhost:3000'], //localhost for testing
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (envOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    const err = new Error('Not allowed by CORS');
+    err.status = 403;
+    return callback(err, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 600
 });
-
 
 //JWT setup
 fastify.register(jwt, {
@@ -34,7 +52,7 @@ fastify.decorate('authenticate', async function (request, reply) {
   try {
     await request.jwtVerify();
   } catch (err) {
-    reply.send(err);
+    reply.code(401).send({ error: 'Unauthorized' });
   }
 });
 
@@ -43,7 +61,7 @@ fastify.decorate('db', db);
 
 //Register routes
 await fastify.register(recipeRoutes);
-await fastify.register(userRoutes); 
+await fastify.register(userRoutes);
 await fastify.register(preferenceRoutes);
 await fastify.register(mealplanRoutes);
 await fastify.register(recommendRoutes);
@@ -60,7 +78,7 @@ const start = async () => {
   try {
     const PORT = process.env.PORT || 3001;
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`Server listening on http://localhost:${PORT}`); //Shows for local testing
+    fastify.log.info(`Server listening on port ${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
